@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bvoice.proto\x12\x05voice\"\x1c\n\x0cSpeakRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\"1\n\rSpeakResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2B\n\x0cVoiceService\x12\x32\n\x05Speak\x12\x13.voice.SpeakRequest\x1a\x14.voice.SpeakResponseB\tZ\x07./protob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bvoice.proto\x12\x05voice\"I\n\x0cSpeakRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05voice\x18\x02 \x01(\t\x12\r\n\x05speed\x18\x03 \x01(\x02\x12\r\n\x05noise\x18\x04 \x01(\x02\"4\n\rSpeakResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x12\n\naudio_data\x18\x02 \x01(\x0c\x32\x42\n\x0cVoiceService\x12\x32\n\x05Speak\x12\x13.voice.SpeakRequest\x1a\x14.voice.SpeakResponseB\tZ\x07./protob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,9 +33,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z\007./proto'
   _globals['_SPEAKREQUEST']._serialized_start=22
-  _globals['_SPEAKREQUEST']._serialized_end=50
-  _globals['_SPEAKRESPONSE']._serialized_start=52
-  _globals['_SPEAKRESPONSE']._serialized_end=101
-  _globals['_VOICESERVICE']._serialized_start=103
-  _globals['_VOICESERVICE']._serialized_end=169
+  _globals['_SPEAKREQUEST']._serialized_end=95
+  _globals['_SPEAKRESPONSE']._serialized_start=97
+  _globals['_SPEAKRESPONSE']._serialized_end=149
+  _globals['_VOICESERVICE']._serialized_start=151
+  _globals['_VOICESERVICE']._serialized_end=217
 # @@protoc_insertion_point(module_scope)

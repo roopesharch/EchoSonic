@@ -1,8 +1,5 @@
 syntax = "proto3";
-
 package voice;
-
-// Ensure Go can find the package
 option go_package = "./proto";
 
 service VoiceService {
@@ -11,9 +8,12 @@ service VoiceService {
 
 message SpeakRequest {
   string text = 1;
+  string voice = 2;
+  float speed = 3;
+  float noise = 4;
 }
 
 message SpeakResponse {
   bool success = 1;
-  string message = 2;
+  bytes audio_data = 2;
 }
