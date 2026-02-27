@@ -1,42 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>EchoSonic Cloud</title>
-    <style>
-        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 40px; }
-        .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        textarea { width: 100%; height: 120px; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;}
-        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; }
-        button:disabled { background: #ccc; }
-        #status { margin-top: 15px; color: #555; font-size: 14px; text-align: center; }
-        audio { width: 100%; margin-top: 20px; }
-    </style>
-</head>
-<body>
-    <div class="box">
+<html>
+<head><title>EchoSonic Cloud</title></head>
+<body style="font-family:sans-serif; background:#f4f7f6; display:flex; justify-content:center; padding:40px;">
+    <div style="background:white; padding:30px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); width:100%; max-width:500px;">
         <h2>🎙️ EchoSonic Cloud</h2>
-        <textarea id="text" placeholder="Type something to speak..."></textarea>
-        <button id="btn" onclick="generate()">🔊 Generate & Play</button>
-        <div id="status"></div>
-        <audio id="audio" controls></audio>
+        <textarea id="text" style="width:100%; height:120px; margin-bottom:15px;"></textarea>
+        <button id="btn" onclick="generate()" style="width:100%; padding:15px; background:#007bff; color:white; border:none; border-radius:8px; cursor:pointer;">🔊 Generate & Play</button>
+        <div id="status" style="margin-top:15px; text-align:center;"></div>
+        <audio id="audio" controls style="width:100%; margin-top:20px;"></audio>
     </div>
 
     <script>
-        // Update this URL with your actual Render URL
         const API_BASE = "https://echosonic-api.onrender.com"; 
 
         async function generate() {
             const btn = document.getElementById('btn');
             const status = document.getElementById('status');
             const audio = document.getElementById('audio');
-            const text = document.getElementById('text').value;
-
+            
             btn.disabled = true;
-            status.innerText = "⏳ AI is processing...";
+            status.innerText = "⏳ Processing...";
 
             const params = new URLSearchParams({
-                'text': text,
+                'text': document.getElementById('text').value,
                 'voice': 'en_US-amy-medium.onnx',
                 'speed': '1.0',
                 'noise': '0.6'
@@ -47,15 +33,19 @@
 
                 if (res.ok) {
                     status.innerText = "✅ Audio Ready!";
-                    // Force the audio player to refresh with a new timestamp
-                    audio.src = `${API_BASE}/listen?t=${Date.now()}`;
-                    audio.load(); // This "wakes up" the play button
-                    audio.play();
-                } else {
-                    status.innerText = "❌ Engine Error. Try a shorter text.";
+                    // Force re-fetch of the file
+                    const audioUrl = `${API_BASE}/listen?t=${Date.now()}`;
+                    audio.src = audioUrl;
+                    audio.load(); // Forces browser to check file length
+                    
+                    audio.oncanplaythrough = () => {
+                        audio.play().catch(() => {
+                            status.innerText = "✅ Ready! Click Play button.";
+                        });
+                    };
                 }
             } catch (e) {
-                status.innerText = "❌ Connection failed. Is the server awake?";
+                status.innerText = "❌ Connection Error";
             } finally {
                 btn.disabled = false;
             }
