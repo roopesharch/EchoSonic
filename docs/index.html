@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EchoSonic Cloud Pro</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
+        .box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        textarea { width: 100%; height: 150px; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>🎙️ EchoSonic Cloud</h2>
+        <textarea id="text" placeholder="Enter up to 3,000 characters..."></textarea>
+        <button id="btn" onclick="generate()">🔊 Generate & Play</button>
+        <audio id="audio" controls style="width: 100%; margin-top: 20px; display: none;"></audio>
+    </div>
+
+    <script>
+        const API_BASE = "https://YOUR-APP.onrender.com"; // CHANGE THIS LATER
+
+        async function generate() {
+            const btn = document.getElementById('btn');
+            const text = document.getElementById('text').value;
+            const audio = document.getElementById('audio');
+
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+
+            const params = new URLSearchParams();
+            params.append('text', text);
+            params.append('voice', 'en_US-amy-medium.onnx');
+            params.append('speed', '1.0');
+            params.append('noise', '0.6');
+
+            try {
+                const res = await fetch(`${API_BASE}/speak`, {
+                    method: 'POST',
+                    body: params
+                });
+
+                if (res.ok) {
+                    audio.src = `${API_BASE}/listen?t=${Date.now()}`;
+                    audio.style.display = "block";
+                    audio.play();
+                }
+            } catch (e) {
+                alert("Cloud engine is starting up. Please wait 30 seconds and try again.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "🔊 Generate & Play";
+            }
+        }
+    </script>
+</body>
+</html>
