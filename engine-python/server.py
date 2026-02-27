@@ -7,15 +7,12 @@ import voice_pb2_grpc
 
 class VoiceService(voice_pb2_grpc.VoiceServiceServicer):
     def Speak(self, request, context):
-        # Render uses absolute paths for reliability
         base_path = os.path.dirname(os.path.abspath(__file__))
         piper_bin = os.path.join(base_path, "piper", "piper")
         model_path = os.path.join(base_path, request.voice)
         output_path = os.path.join(base_path, "output.wav")
 
-        if os.path.exists(output_path):
-            os.remove(output_path)
-
+        # Command to run Piper
         command = [
             piper_bin,
             "--model", model_path,
@@ -29,7 +26,7 @@ class VoiceService(voice_pb2_grpc.VoiceServiceServicer):
             process.communicate(input=request.text.encode('utf-8'))
             return voice_pb2.SpeakResponse(success=True)
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error generating audio: {e}")
             return voice_pb2.SpeakResponse(success=False)
 
 def serve():
