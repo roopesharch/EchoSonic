@@ -2,56 +2,85 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>EchoSonic Cloud Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoSonic Pro - Cloud AI</title>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
-        .box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        textarea { width: 100%; height: 150px; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        button:disabled { background: #ccc; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h1 { color: #1877f2; margin-top: 0; }
+        textarea { width: 100%; height: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .controls { margin-top: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #444; }
+        select, input { width: 100%; margin-bottom: 15px; }
+        button { width: 100%; padding: 15px; background: #1877f2; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 14px; text-align: center; color: #666; }
+        audio { width: 100%; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>🎙️ EchoSonic Cloud</h2>
-        <textarea id="text" placeholder="Enter up to 3,000 characters..."></textarea>
-        <button id="btn" onclick="generate()">🔊 Generate & Play</button>
-        <audio id="audio" controls style="width: 100%; margin-top: 20px; display: none;"></audio>
+    <div class="card">
+        <h1>🎙️ EchoSonic Pro</h1>
+        <textarea id="text" placeholder="Enter text to speak (up to 3,000 characters)..."></textarea>
+        
+        <div class="controls">
+            <label>Voice Model</label>
+            <select id="voice">
+                <option value="en_US-lessac-medium.onnx">Standard (Lessac)</option>
+                <option value="en_US-amy-medium.onnx">Deep & Rich (Amy)</option>
+                <option value="en_US-kristin-medium.onnx">Soft & Calm (Kristin)</option>
+            </select>
+
+            <label>Speed (0.5 - 2.0)</label>
+            <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0">
+        </div>
+
+        <button id="genBtn" onclick="generateSpeech()">🔊 Generate & Play</button>
+        <div id="status"></div>
+        <audio id="player" controls style="display:none;"></audio>
     </div>
 
     <script>
-        const API_BASE = "https://YOUR-APP.onrender.com"; // CHANGE THIS LATER
+        // REPLACE THIS WITH YOUR ACTUAL RENDER URL
+        const API_BASE = "https://echosonic-api.onrender.com"; 
 
-        async function generate() {
-            const btn = document.getElementById('btn');
+        async function generateSpeech() {
+            const btn = document.getElementById('genBtn');
+            const status = document.getElementById('status');
+            const player = document.getElementById('player');
             const text = document.getElementById('text').value;
-            const audio = document.getElementById('audio');
+
+            if (!text) { alert("Please enter text"); return; }
 
             btn.disabled = true;
-            btn.innerText = "Processing...";
+            status.innerText = "⏳ Requesting AI Engine (May take 30s to wake up)...";
 
             const params = new URLSearchParams();
             params.append('text', text);
-            params.append('voice', 'en_US-amy-medium.onnx');
-            params.append('speed', '1.0');
-            params.append('noise', '0.6');
+            params.append('voice', document.getElementById('voice').value);
+            params.append('speed', document.getElementById('speed').value);
+            params.append('noise', '0.667');
 
             try {
-                const res = await fetch(`${API_BASE}/speak`, {
+                const response = await fetch(`${API_BASE}/speak`, {
                     method: 'POST',
                     body: params
                 });
 
-                if (res.ok) {
-                    audio.src = `${API_BASE}/listen?t=${Date.now()}`;
-                    audio.style.display = "block";
-                    audio.play();
+                if (response.ok) {
+                    status.innerText = "✅ Success! Loading audio...";
+                    // Append timestamp to bust cache
+                    player.src = `${API_BASE}/listen?t=${Date.now()}`;
+                    player.style.display = "block";
+                    player.play();
+                } else {
+                    status.innerText = "❌ Engine Error. Try again in a moment.";
                 }
-            } catch (e) {
-                alert("Cloud engine is starting up. Please wait 30 seconds and try again.");
+            } catch (error) {
+                status.innerText = "❌ Connection failed. Is the Render server awake?";
+                console.error(error);
             } finally {
                 btn.disabled = false;
-                btn.innerText = "🔊 Generate & Play";
             }
         }
     </script>
