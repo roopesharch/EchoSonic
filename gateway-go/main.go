@@ -2,71 +2,77 @@ package main
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"log"
-	"os"
-	"os/exec"
+	"net/http"
 	"time"
 
+	pb "github.com/roopesharch/EchoSonic/gateway-go/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	pb "gateway-go/pb"
 )
 
 func main() {
-	conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial("127.0.0.1:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("❌ Connection failed: %v", err)
+		log.Fatalf("Fail to dial: %v", err)
 	}
 	defer conn.Close()
 	client := pb.NewVoiceServiceClient(conn)
 
-	// 1. Check if story.txt is actually readable
-	content, err := os.ReadFile("story.txt")
-	if err != nil {
-		log.Fatalf("❌ Could not read story.txt: %v", err)
-	}
-	if len(content) == 0 {
-		log.Fatalf("❌ story.txt is EMPTY! Put some text in it first.")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	log.Println("📖 Sending story.txt to Offline AI...")
-	stream, err := client.GenerateSpeech(ctx, &pb.SpeechRequest{
-		Text: string(content),
+	// Route 1: The Main UI
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `
+			<html>
+			<body style="font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding: 50px;">
+				<h1>🎙️ EchoSonic AI</h1>
+				<form action="/speak" method="GET">
+					<input type="text" name="text" style="padding: 15px; width: 400px; border-radius: 5px; border: 1px solid #ccc;" placeholder="Type something...">
+					<button type="submit" style="padding: 15px 25px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Generate Speech</button>
+				</form>
+			</body>
+			</html>
+		`)
 	})
-	if err != nil {
-		log.Fatalf("❌ Stream error: %v", err)
-	}
 
-	tempFile := "audiobook.wav"
-	outFile, _ := os.Create(tempFile)
+	// Route 2: The Logic (Triggers Python)
+	http.HandleFunc("/speak", func(w http.ResponseWriter, r *http.Request) {
+		text := r.URL.Query().Get("text")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		defer cancel()
 
-	var totalBytes int64
-	for {
-		res, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
+		_, err := client.Speak(ctx, &pb.SpeakRequest{Text: text})
 		if err != nil {
-			log.Fatalf("❌ Receive error: %v", err)
+			http.Error(w, "AI Engine Timeout - Try a shorter sentence.", 504)
+			return
 		}
-		n, _ := outFile.Write(res.GetAudioChunk())
-		totalBytes += int64(n)
-	}
-	outFile.Close()
 
-	// 2. Debug: Check if the file actually has audio data
-	if totalBytes < 100 {
-		log.Fatalf("❌ The AI generated an empty file (%d bytes). Check the Python logs!", totalBytes)
-	}
+		// Success Page with Player and Direct Link
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `
+			<html>
+			<body style="font-family: sans-serif; text-align: center; padding: 50px; background: #f0f2f5;">
+				<h2>✅ Speech Ready</h2>
+				<audio controls autoplay style="width: 500px;">
+					<source src="/listen" type="audio/wav">
+				</audio>
+				<br><br>
+				<a href="/listen" target="_blank" style="font-size: 20px; color: #007bff;">Click here to open raw audio file</a>
+				<br><br>
+				<a href="/">⬅️ Back to home</a>
+			</body>
+			</html>
+		`)
+	})
 
-	log.Printf("🔊 Playing %d bytes of offline audio...", totalBytes)
-	exec.Command("afplay", tempFile).Run()
+	// Route 3: The Audio Stream
+	http.HandleFunc("/listen", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "audio/wav")
+		// This path must point to where Python saves the file
+		http.ServeFile(w, r, "../engine-python/output.wav")
+	})
 
-	os.Remove(tempFile)
-	log.Println("✅ Done!")
+	fmt.Println("🌐 EchoSonic UI Live on port 8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

@@ -1,21 +1,19 @@
 syntax = "proto3";
 
-// This helps Go organize its code internaly
-option go_package = "./pb";
-
 package voice;
 
-// The service definition
+// Ensure Go can find the package
+option go_package = "./proto";
+
 service VoiceService {
-  // Go sends a SpeechRequest, Python streams back multiple SpeechResponses
-  rpc GenerateSpeech(SpeechRequest) returns (stream SpeechResponse);
+  rpc Speak (SpeakRequest) returns (SpeakResponse);
 }
 
-message SpeechRequest {
+message SpeakRequest {
   string text = 1;
-  string voice_model = 2;
 }
 
-message SpeechResponse {
-  bytes audio_chunk = 1;
+message SpeakResponse {
+  bool success = 1;
+  string message = 2;
 }

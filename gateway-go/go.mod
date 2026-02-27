@@ -1,4 +1,4 @@
-module gateway-go
+module github.com/roopesharch/EchoSonic/gateway-go
 
 go 1.25.0
 

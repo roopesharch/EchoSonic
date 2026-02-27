@@ -5,7 +5,7 @@ import warnings
 
 import voice_pb2 as voice__pb2
 
-GRPC_GENERATED_VERSION = '1.71.2'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in voice_pb2_grpc.py depends on'
+        + ' but the generated code in voice_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -26,8 +26,7 @@ if _version_not_supported:
 
 
 class VoiceServiceStub(object):
-    """The service definition
-    """
+    """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
         """Constructor.
@@ -35,20 +34,18 @@ class VoiceServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GenerateSpeech = channel.unary_stream(
-                '/voice.VoiceService/GenerateSpeech',
-                request_serializer=voice__pb2.SpeechRequest.SerializeToString,
-                response_deserializer=voice__pb2.SpeechResponse.FromString,
+        self.Speak = channel.unary_unary(
+                '/voice.VoiceService/Speak',
+                request_serializer=voice__pb2.SpeakRequest.SerializeToString,
+                response_deserializer=voice__pb2.SpeakResponse.FromString,
                 _registered_method=True)
 
 
 class VoiceServiceServicer(object):
-    """The service definition
-    """
+    """Missing associated documentation comment in .proto file."""
 
-    def GenerateSpeech(self, request, context):
-        """Go sends a SpeechRequest, Python streams back multiple SpeechResponses
-        """
+    def Speak(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -56,10 +53,10 @@ class VoiceServiceServicer(object):
 
 def add_VoiceServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GenerateSpeech': grpc.unary_stream_rpc_method_handler(
-                    servicer.GenerateSpeech,
-                    request_deserializer=voice__pb2.SpeechRequest.FromString,
-                    response_serializer=voice__pb2.SpeechResponse.SerializeToString,
+            'Speak': grpc.unary_unary_rpc_method_handler(
+                    servicer.Speak,
+                    request_deserializer=voice__pb2.SpeakRequest.FromString,
+                    response_serializer=voice__pb2.SpeakResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -70,11 +67,10 @@ def add_VoiceServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class VoiceService(object):
-    """The service definition
-    """
+    """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GenerateSpeech(request,
+    def Speak(request,
             target,
             options=(),
             channel_credentials=None,
@@ -84,12 +80,12 @@ class VoiceService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_stream(
+        return grpc.experimental.unary_unary(
             request,
             target,
-            '/voice.VoiceService/GenerateSpeech',
-            voice__pb2.SpeechRequest.SerializeToString,
-            voice__pb2.SpeechResponse.FromString,
+            '/voice.VoiceService/Speak',
+            voice__pb2.SpeakRequest.SerializeToString,
+            voice__pb2.SpeakResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -2,74 +2,46 @@ import grpc
 from concurrent import futures
 import voice_pb2
 import voice_pb2_grpc
-import io
-import wave
 import os
-import sys
-from piper.voice import PiperVoice
+import subprocess
+import time
 
-# 1. Force the absolute path to the model
-# This ensures Python finds it even if you are in a different subfolder
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(BASE_DIR, "en_US-lessac-medium.onnx")
-config_path = os.path.join(BASE_DIR, "en_US-lessac-medium.onnx.json")
+class VoiceServicer(voice_pb2_grpc.VoiceServiceServicer):
+    def Speak(self, request, context):
+        print(f"🎙️ gRPC Call: {request.text}")
+        output_path = "output.wav"
+        model_path = "en_US-lessac-medium.onnx"
 
-print(f"🔍 Looking for model at: {model_path}")
+        # 1. Clean up old file
+        if os.path.exists(output_path):
+            os.remove(output_path)
 
-if not os.path.exists(model_path):
-    print(f"❌ FATAL ERROR: Model file not found!")
-    sys.exit(1)
-
-try:
-    voice = PiperVoice.load(model_path, config_path)
-    print("🧠 AI Voice Brain loaded successfully!")
-except Exception as e:
-    print(f"❌ FATAL ERROR loading Piper: {e}")
-    sys.exit(1)
-
-class VoiceService(voice_pb2_grpc.VoiceServiceServicer):
-    def GenerateSpeech(self, request, context):
-        text = request.text.strip()
-        if not text:
-            print("⚠️ Empty text received.")
-            return
-
-        print(f"🧬 Synthesizing: '{text[:30]}...'")
-        
-        audio_stream = io.BytesIO()
-        
         try:
-            with wave.open(audio_stream, "wb") as wav_file:
-                wav_file.setnchannels(1)
-                wav_file.setsampwidth(2)
-                wav_file.setframerate(22050)
-                
-                # The actual "Speaking" part
-                voice.synthesize(text, wav_file)
-            
-            audio_size = audio_stream.tell()
-            print(f"📦 Audio generated: {audio_size} bytes")
-            
-            if audio_size <= 44:
-                print("⚠️ Warning: Piper generated no audio content!")
+            # 2. Use the Command Line tool directly (This is what worked for you!)
+            # We "pipe" the text into the piper command
+            command = f'echo "{request.text}" | piper --model {model_path} --output_file {output_path}'
+            subprocess.run(command, shell=True, check=True)
 
-            audio_stream.seek(0)
-            while True:
-                chunk = audio_stream.read(4096)
-                if not chunk:
-                    break
-                yield voice_pb2.SpeechResponse(audio_chunk=chunk)
-        
+            # 3. Verify it worked
+            if os.path.exists(output_path):
+                size = os.path.getsize(output_path)
+                print(f"✅ Success: {size} bytes generated.")
+                return voice_pb2.SpeakResponse(success=True, message=f"Generated {size} bytes")
+            
+            return voice_pb2.SpeakResponse(success=False, message="File not created")
+
         except Exception as e:
-            print(f"❌ Synthesis Error: {e}")
+            print(f"❌ Subprocess error: {e}")
+            return voice_pb2.SpeakResponse(success=False, message=str(e))
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    voice_pb2_grpc.add_VoiceServiceServicer_to_server(VoiceService(), server)
-    server.add_insecure_port('[::]:50051')
-    print("🚀 OFFLINE SERVER READY ON 50051")
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
+    voice_pb2_grpc.add_VoiceServiceServicer_to_server(VoiceServicer(), server)
+    server.add_insecure_port('127.0.0.1:50051')
+    print("🚀 BULLETPROOF SERVER ACTIVE on 127.0.0.1:50051")
     server.start()
-    server.wait_for_termination()
+    server.wait_for_termination() 
 
 if __name__ == '__main__':
     serve()
+    
