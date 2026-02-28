@@ -1,51 +1,99 @@
 <!DOCTYPE html>
-<html>
-<head><title>EchoSonic Cloud</title></head>
-<body style="font-family:sans-serif; background:#f4f7f6; display:flex; justify-content:center; padding:40px;">
-    <div style="background:white; padding:30px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); width:100%; max-width:500px;">
-        <h2>🎙️ EchoSonic Cloud</h2>
-        <textarea id="text" style="width:100%; height:120px; margin-bottom:15px;"></textarea>
-        <button id="btn" onclick="generate()" style="width:100%; padding:15px; background:#007bff; color:white; border:none; border-radius:8px; cursor:pointer;">🔊 Generate & Play</button>
-        <div id="status" style="margin-top:15px; text-align:center;"></div>
-        <audio id="audio" controls style="width:100%; margin-top:20px;"></audio>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoSonic Cloud - AI Voice</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 100%; max-width: 500px; text-align: center; }
+        h1 { color: #1877f2; margin-bottom: 20px; }
+        textarea { width: 100%; height: 150px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; resize: none; box-sizing: border-box; margin-bottom: 15px; }
+        .controls { text-align: left; margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; font-size: 14px; }
+        select, input[type=range] { width: 100%; margin-bottom: 15px; }
+        button { width: 100%; padding: 15px; background: #1877f2; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 14px; min-height: 20px; color: #555; }
+        audio { width: 100%; margin-top: 25px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>🎙️ EchoSonic Cloud</h1>
+        <textarea id="text" placeholder="Enter text for AI to speak..."></textarea>
+        
+        <div class="controls">
+            <label>Voice Personality</label>
+            <select id="voice">
+                <option value="en_US-amy-medium.onnx">Deep & Expressive (Amy)</option>
+                <option value="en_US-lessac-medium.onnx">Balanced (Standard)</option>
+                <option value="en_US-kristin-medium.onnx">Soft & Calm (Kristin)</option>
+            </select>
+
+            <label>Speaking Speed</label>
+            <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0">
+        </div>
+
+        <button id="genBtn" onclick="generate()">🔊 Generate & Play</button>
+        <div id="status"></div>
+        
+        <audio id="player" controls></audio>
     </div>
 
     <script>
-        const API_BASE = "https://echosonic-api.onrender.com"; 
+        // REPLACE WITH YOUR ACTUAL RENDER URL
+        const API_BASE = "https://echosonic-api.onrender.com";
 
         async function generate() {
-            const btn = document.getElementById('btn');
+            const btn = document.getElementById('genBtn');
+            const player = document.getElementById('player');
             const status = document.getElementById('status');
-            const audio = document.getElementById('audio');
-            
+            const text = document.getElementById('text').value;
+
+            if (!text.trim()) {
+                alert("Please enter text.");
+                return;
+            }
+
             btn.disabled = true;
-            status.innerText = "⏳ Processing...";
+            status.innerText = "⏳ AI Engine processing...";
+            player.style.display = "none";
+            player.src = ""; // Reset the player to fix greyed button
 
             const params = new URLSearchParams({
-                'text': document.getElementById('text').value,
-                'voice': 'en_US-amy-medium.onnx',
-                'speed': '1.0',
-                'noise': '0.6'
+                'text': text,
+                'voice': document.getElementById('voice').value,
+                'speed': document.getElementById('speed').value
             });
 
             try {
                 const res = await fetch(`${API_BASE}/speak`, { method: 'POST', body: params });
-
+                
                 if (res.ok) {
-                    status.innerText = "✅ Audio Ready!";
-                    // Force re-fetch of the file
-                    const audioUrl = `${API_BASE}/listen?t=${Date.now()}`;
-                    audio.src = audioUrl;
-                    audio.load(); // Forces browser to check file length
+                    status.innerText = "✅ Success! Loading audio...";
                     
-                    audio.oncanplaythrough = () => {
-                        audio.play().catch(() => {
-                            status.innerText = "✅ Ready! Click Play button.";
+                    // Force hard reload from server using timestamp
+                    const audioSrc = `${API_BASE}/listen?cb=${new Date().getTime()}`;
+                    player.src = audioSrc;
+                    player.style.display = "block";
+                    
+                    player.load(); // Force browser to check new file headers/size
+                    
+                    const playPromise = player.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(() => {
+                            console.log("Autoplay blocked. User must click play.");
+                            status.innerText = "✅ Ready! Press Play.";
                         });
-                    };
+                    }
+                } else {
+                    status.innerText = "❌ Engine Error.";
                 }
             } catch (e) {
-                status.innerText = "❌ Connection Error";
+                status.innerText = "❌ Connection failed. Backend might be waking up.";
+                console.error(e);
             } finally {
                 btn.disabled = false;
             }
