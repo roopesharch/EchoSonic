@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	pb "github.com/roopesharch/EchoSonic/gateway-go/proto"
 	"google.golang.org/grpc"
@@ -27,13 +29,12 @@ func main() {
 
 		r.ParseForm()
 		speed, _ := strconv.ParseFloat(r.FormValue("speed"), 32)
-		noise, _ := strconv.ParseFloat(r.FormValue("noise"), 32)
 
 		_, err := client.Speak(context.Background(), &pb.SpeakRequest{
 			Text:  r.FormValue("text"),
 			Voice: r.FormValue("voice"),
 			Speed: float32(speed),
-			Noise: float32(noise),
+			Noise: 0.667,
 		})
 
 		if err != nil {
@@ -45,9 +46,8 @@ func main() {
 
 	http.HandleFunc("/listen", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
-		filePath := "../engine-python/output.wav"
+		filePath := "/app/shared_output.wav"
 		file, err := os.Open(filePath)
 		if err != nil {
 			http.Error(w, "File not found", 404)
@@ -55,18 +55,19 @@ func main() {
 		}
 		defer file.Close()
 
-		// Get file info to tell the browser the exact size
-		stat, _ := file.Stat()
-		w.Header().Set("Content-Length", strconv.FormatInt(stat.Size(), 10))
-		w.Header().Set("Content-Type", "audio/wav")
-		w.Header().Set("Accept-Ranges", "bytes")
+		info, _ := file.Stat()
 
-		http.ServeContent(w, r, "output.wav", stat.ModTime(), file)
+		// CRITICAL: Headers that tell Chrome this is a playable stream
+		w.Header().Set("Content-Type", "audio/wav")
+		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+		http.ServeContent(w, r, "output.wav", time.Now(), file)
 	})
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	http.ListenAndServe(":"+port, nil)
 }
