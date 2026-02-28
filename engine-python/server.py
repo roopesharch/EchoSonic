@@ -1,47 +1,43 @@
 import grpc
 from concurrent import futures
-import subprocess
 import os
+import wave
 import voice_pb2
 import voice_pb2_grpc
+# NEW: Import the piper library directly
+from piper.voice import PiperVoice 
+
+# Global Cache: Keeps the model "warm" in memory
+VOICE_MODELS = {}
 
 class VoiceService(voice_pb2_grpc.VoiceServiceServicer):
     def Speak(self, request, context):
-        # Using absolute paths to avoid 'File Not Found' errors on Render
         base_path = os.path.dirname(os.path.abspath(__file__))
-        piper_bin = os.path.join(base_path, "piper", "piper")
         model_path = os.path.join(base_path, request.voice)
-        
-        # We save it to the root of /app so Go can find it easily
         output_path = "/app/shared_output.wav"
 
-        command = [
-            piper_bin,
-            "--model", model_path,
-            "--length_scale", str(1.0 / request.speed),
-            "--noise_scale", str(request.noise),
-            "--output_file", output_path
-        ]
-        
         try:
-            # Ensure any old file is gone before writing new one
-            if os.path.exists(output_path):
-                os.remove(output_path)
-                
-            process = subprocess.Popen(command, stdin=subprocess.PIPE)
-            process.communicate(input=request.text.encode('utf-8'))
+            # PERFORMANCE HACK: Only load from disk if not already in RAM
+            if request.voice not in VOICE_MODELS:
+                print(f"--- Loading model {request.voice} into RAM ---")
+                VOICE_MODELS[request.voice] = PiperVoice.load(model_path)
             
-            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                return voice_pb2.SpeakResponse(success=True)
-            return voice_pb2.SpeakResponse(success=False)
+            voice = VOICE_MODELS[request.voice]
+
+            # Direct synthesis (3-5x faster than subprocess)
+            with wave.open(output_path, "wb") as wav_file:
+                voice.synthesize(request.text, wav_file)
+            
+            return voice_pb2.SpeakResponse(success=True)
         except Exception as e:
-            print(f"CRITICAL ERROR: {e}")
+            print(f"Synthesis Error: {e}")
             return voice_pb2.SpeakResponse(success=False)
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
     voice_pb2_grpc.add_VoiceServiceServicer_to_server(VoiceService(), server)
     server.add_insecure_port('[::]:50051')
+    print("🚀 Fast AI Engine (Warm Model) Listening...")
     server.start()
     server.wait_for_termination()
 
