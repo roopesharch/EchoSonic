@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -30,17 +28,12 @@ func main() {
 		r.ParseForm()
 		speed, _ := strconv.ParseFloat(r.FormValue("speed"), 32)
 
-		_, err := client.Speak(context.Background(), &pb.SpeakRequest{
+		_, _ = client.Speak(context.Background(), &pb.SpeakRequest{
 			Text:  r.FormValue("text"),
 			Voice: r.FormValue("voice"),
 			Speed: float32(speed),
 			Noise: 0.667,
 		})
-
-		if err != nil {
-			w.WriteHeader(500)
-			return
-		}
 		w.WriteHeader(200)
 	})
 
@@ -56,8 +49,6 @@ func main() {
 		defer file.Close()
 
 		info, _ := file.Stat()
-
-		// CRITICAL: Headers that tell Chrome this is a playable stream
 		w.Header().Set("Content-Type", "audio/wav")
 		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
