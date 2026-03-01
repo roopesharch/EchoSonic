@@ -70,6 +70,7 @@ audio {
 
 <select id="voiceSelect">
     <option value="en_US-amy-low.onnx">Amy (Female)</option>
+    <option value="en_US-ryan-low.onnx">Ryan (Male)</option>
 </select>
 
 <br>
@@ -99,13 +100,14 @@ async function speak() {
         return;
     }
 
-    statusDiv.innerText = "⏳ Generating voice... (Render may wake up)";
+    statusDiv.innerText = "⏳ Generating voice...";
     audioPlayer.src = "";
 
     try {
         const response = await fetch(
-            "https://echosonic.onrender.com/synthesize?text=" 
+            "https://echosonic.onrender.com/synthesize?text="
             + encodeURIComponent(text)
+            + "&voice=" + encodeURIComponent(voice)
         );
 
         if (!response.ok) {
@@ -120,7 +122,7 @@ async function speak() {
 
         statusDiv.innerText = "✅ Voice generated successfully!";
     } catch (error) {
-        statusDiv.innerText = "❌ Error generating voice. Try again.";
+        statusDiv.innerText = "❌ Error generating voice.";
     }
 }
 </script>
