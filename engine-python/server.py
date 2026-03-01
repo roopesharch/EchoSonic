@@ -4,27 +4,28 @@ import os
 import wave
 import voice_pb2
 import voice_pb2_grpc
-# NEW: Import the piper library directly
 from piper.voice import PiperVoice 
 
-# Global Cache: Keeps the model "warm" in memory
+# Memory cache for voices
 VOICE_MODELS = {}
 
 class VoiceService(voice_pb2_grpc.VoiceServiceServicer):
     def Speak(self, request, context):
         base_path = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(base_path, request.voice)
+        # Ensure we are looking for the 'low' version
+        voice_file = request.voice.replace("-medium", "-low")
+        model_path = os.path.join(base_path, voice_file)
         output_path = "/app/shared_output.wav"
 
         try:
-            # PERFORMANCE HACK: Only load from disk if not already in RAM
-            if request.voice not in VOICE_MODELS:
-                print(f"--- Loading model {request.voice} into RAM ---")
-                VOICE_MODELS[request.voice] = PiperVoice.load(model_path)
+            # Load into RAM if not already there
+            if voice_file not in VOICE_MODELS:
+                print(f"--- Loading {voice_file} into RAM ---")
+                VOICE_MODELS[voice_file] = PiperVoice.load(model_path)
             
-            voice = VOICE_MODELS[request.voice]
+            voice = VOICE_MODELS[voice_file]
 
-            # Direct synthesis (3-5x faster than subprocess)
+            # Synthesize directly (Much faster than subprocess)
             with wave.open(output_path, "wb") as wav_file:
                 voice.synthesize(request.text, wav_file)
             
@@ -37,7 +38,7 @@ def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
     voice_pb2_grpc.add_VoiceServiceServicer_to_server(VoiceService(), server)
     server.add_insecure_port('[::]:50051')
-    print("🚀 Fast AI Engine (Warm Model) Listening...")
+    print("🚀 Fast Engine (Low-Quality Mode) Live...")
     server.start()
     server.wait_for_termination()
 
