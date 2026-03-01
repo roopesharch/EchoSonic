@@ -54,6 +54,7 @@ textarea {
     font-size:16px;
     margin-top:20px;
     resize:none;
+    color: #1e293b;
 }
 
 .char-counter {
@@ -125,7 +126,7 @@ audio {
 
 <section class="hero">
     <h1>🎙 EchoSonic AI Voice</h1>
-    <p>Convert text into natural AI speech instantly. Fast. Clean. Powerful.</p>
+    <p>Convert text into natural AI speech instantly. Powered by Google Cloud.</p>
 </section>
 
 <section class="generator-section">
@@ -184,7 +185,10 @@ const speedSelect = document.getElementById("speedSelect");
 
 let currentAudioBlob = null;
 const DAILY_LIMIT = 4;
-const ADMIN_SECRET = "roopesh123"; // CHANGE THIS
+const ADMIN_SECRET = "roopesh123"; 
+
+// Update this to your specific GCP URL
+const BACKEND_URL = "https://echosonic-backend-864726775563.us-central1.run.app";
 
 // Detect admin mode
 const params = new URLSearchParams(window.location.search);
@@ -255,13 +259,13 @@ async function speak() {
         return;
     }
 
-    statusDiv.innerText = "Generating voice...";
+    statusDiv.innerText = "Generating voice... (First time might take 10s to wake up)";
     downloadBtn.style.display = "none";
     generateBtn.disabled = true;
 
     try {
         const response = await fetch(
-            "https://echosonic.onrender.com/synthesize?text="
+            `${BACKEND_URL}/synthesize?text=`
             + encodeURIComponent(text)
             + "&voice=" + encodeURIComponent(voice)
         );
@@ -279,7 +283,8 @@ async function speak() {
         downloadBtn.style.display = "inline-block";
         statusDiv.innerText = "Voice generated successfully!";
     } catch (error) {
-        statusDiv.innerText = "Error generating voice.";
+        console.error(error);
+        statusDiv.innerText = "Error generating voice. Make sure the backend is active.";
     }
 
     generateBtn.disabled = false;
