@@ -13,15 +13,19 @@ import (
 )
 
 func main() {
-	// Connect to Python Engine
 	conn, _ := grpc.Dial("127.0.0.1:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	defer conn.Close()
 	client := pb.NewVoiceServiceClient(conn)
 
-	// /speak triggers the AI generation
+	// Route 1: Home/Health Check
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("🚀 EchoSonic API is running on Branch 01"))
+	})
+
+	// Route 2: Speak (Trigger AI)
 	http.HandleFunc("/speak", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == "OPTIONS" {
 			return
@@ -39,23 +43,23 @@ func main() {
 		w.WriteHeader(200)
 	})
 
-	// /listen streams the generated file
+	// Route 3: Listen (Stream Audio)
 	http.HandleFunc("/listen", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		filePath := "/app/shared_output.wav"
 
-		// FILE SYNC LOCK: Wait up to 3 seconds for the file to exist and have size
-		for i := 0; i < 6; i++ {
+		// SYNC LOCK: Wait for file to have actual audio data
+		for i := 0; i < 10; i++ {
 			info, err := os.Stat(filePath)
-			if err == nil && info.Size() > 100 { // Wav headers are usually > 44 bytes
+			if err == nil && info.Size() > 100 {
 				break
 			}
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(400 * time.Millisecond)
 		}
 
 		file, err := os.Open(filePath)
 		if err != nil {
-			http.Error(w, "File not ready", 404)
+			http.Error(w, "File busy or not found", 404)
 			return
 		}
 		defer file.Close()
