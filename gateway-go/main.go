@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
-	"strconv"
+	"path/filepath"
 	"time"
 
 	pb "github.com/roopesharch/EchoSonic/gateway-go/proto"
@@ -17,30 +18,28 @@ func main() {
 	defer conn.Close()
 	client := pb.NewVoiceServiceClient(conn)
 
-	// Health check to prevent 404 on home URL
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("🚀 EchoSonic API is Live on Branch 01"))
-	})
+	baseDir := "/workspaces/EchoSonic"
+	if _, err := os.Stat(baseDir); err != nil {
+		baseDir = "/app"
+	}
+	sharedFilePath := filepath.Join(baseDir, "shared_output.wav")
+	docsPath := filepath.Join(baseDir, "docs")
+
+	http.Handle("/", http.FileServer(http.Dir(docsPath)))
 
 	http.HandleFunc("/speak", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == "OPTIONS" {
-			return
-		}
-
 		r.ParseForm()
-		speed, _ := strconv.ParseFloat(r.FormValue("speed"), 32)
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
 
-		resp, err := client.Speak(context.Background(), &pb.SpeakRequest{
+		resp, err := client.Speak(ctx, &pb.SpeakRequest{
 			Text:  r.FormValue("text"),
 			Voice: r.FormValue("voice"),
-			Speed: float32(speed),
 		})
 
 		if err != nil || !resp.Success {
-			w.WriteHeader(500)
+			http.Error(w, "Engine error", 500)
 			return
 		}
 		w.WriteHeader(200)
@@ -48,37 +47,17 @@ func main() {
 
 	http.HandleFunc("/listen", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		filePath := "/app/shared_output.wav"
-
-		// SYNC LOCK: Verify file has size before serving
-		var validFile bool
-		for i := 0; i < 15; i++ {
-			info, err := os.Stat(filePath)
-			if err == nil && info.Size() > 100 {
-				validFile = true
-				break
-			}
-			time.Sleep(500 * time.Millisecond)
-		}
-
-		if !validFile {
-			http.Error(w, "File not ready", 404)
+		time.Sleep(300 * time.Millisecond)
+		if info, err := os.Stat(sharedFilePath); err == nil && info.Size() > 44 {
+			file, _ := os.Open(sharedFilePath)
+			defer file.Close()
+			w.Header().Set("Content-Type", "audio/wav")
+			http.ServeContent(w, r, "output.wav", time.Now(), file)
 			return
 		}
-
-		file, _ := os.Open(filePath)
-		defer file.Close()
-
-		info, _ := file.Stat()
-		w.Header().Set("Content-Type", "audio/wav")
-		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
-		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-		http.ServeContent(w, r, "output.wav", time.Now(), file)
+		http.Error(w, "File not ready", 404)
 	})
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	http.ListenAndServe(":"+port, nil)
+	fmt.Println("🚀 Gateway Running on :8080")
+	http.ListenAndServe(":8080", nil)
 }
