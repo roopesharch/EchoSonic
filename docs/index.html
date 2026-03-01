@@ -41,10 +41,20 @@ button {
     background: #00c3ff;
     color: black;
     cursor: pointer;
+    margin-right: 10px;
 }
 
 button:hover {
     background: #00a0d6;
+}
+
+#downloadBtn {
+    background: #00ff95;
+    display: none;
+}
+
+#downloadBtn:hover {
+    background: #00d17c;
 }
 
 #status {
@@ -74,7 +84,9 @@ audio {
 </select>
 
 <br>
+
 <button onclick="speak()">Generate Voice</button>
+<button id="downloadBtn" onclick="downloadAudio()">Download</button>
 
 <div id="status"></div>
 
@@ -86,6 +98,9 @@ const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
 const statusDiv = document.getElementById("status");
 const audioPlayer = document.getElementById("audioPlayer");
+const downloadBtn = document.getElementById("downloadBtn");
+
+let currentAudioBlob = null;
 
 textInput.addEventListener("input", () => {
     charCount.innerText = textInput.value.length + " characters";
@@ -102,6 +117,7 @@ async function speak() {
 
     statusDiv.innerText = "⏳ Generating voice...";
     audioPlayer.src = "";
+    downloadBtn.style.display = "none";
 
     try {
         const response = await fetch(
@@ -115,15 +131,31 @@ async function speak() {
         }
 
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+        currentAudioBlob = blob;
 
+        const url = URL.createObjectURL(blob);
         audioPlayer.src = url;
         audioPlayer.play();
 
+        downloadBtn.style.display = "inline-block";
         statusDiv.innerText = "✅ Voice generated successfully!";
     } catch (error) {
         statusDiv.innerText = "❌ Error generating voice.";
     }
+}
+
+function downloadAudio() {
+    if (!currentAudioBlob) return;
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const fileName = "EchoSonic_" + timestamp + ".wav";
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(currentAudioBlob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 </script>
 
