@@ -2,6 +2,7 @@ import io
 import wave
 import threading
 import os
+import hashlib
 from fastapi import FastAPI, Query
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,9 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-VOICE_MODELS = {}
-synth_lock = threading.Lock()
-
 ENGINE_DIR = "engine-python"
 
 AVAILABLE_VOICES = {
@@ -26,21 +24,34 @@ AVAILABLE_VOICES = {
     "en_US-ryan-low.onnx": os.path.join(ENGINE_DIR, "en_US-ryan-low.onnx"),
 }
 
-def load_model(voice_name):
-    if voice_name not in VOICE_MODELS:
-        model_path = AVAILABLE_VOICES[voice_name]
+VOICE_MODELS = {}
+CACHE = {}
+synth_lock = threading.Lock()
+
+# 🔥 Preload all models at startup
+@app.on_event("startup")
+def load_all_models():
+    print("Loading voice models...")
+    for voice_name, model_path in AVAILABLE_VOICES.items():
         VOICE_MODELS[voice_name] = PiperVoice.load(model_path)
-    return VOICE_MODELS[voice_name]
+    print("All models loaded.")
 
 @app.get("/synthesize")
 def synthesize(
     text: str = Query(..., min_length=1),
     voice: str = Query("en_US-amy-low.onnx")
 ):
-    if voice not in AVAILABLE_VOICES:
+    if voice not in VOICE_MODELS:
         voice = "en_US-amy-low.onnx"
 
-    voice_model = load_model(voice)
+    # 🔥 Create cache key
+    cache_key = hashlib.md5((voice + text).encode()).hexdigest()
+
+    # If already generated → return instantly
+    if cache_key in CACHE:
+        return Response(content=CACHE[cache_key], media_type="audio/wav")
+
+    voice_model = VOICE_MODELS[voice]
     buffer = io.BytesIO()
 
     with synth_lock:
@@ -53,4 +64,9 @@ def synthesize(
                 if hasattr(chunk, "audio_int16_bytes"):
                     wav_file.writeframes(chunk.audio_int16_bytes)
 
-    return Response(content=buffer.getvalue(), media_type="audio/wav")
+    audio_data = buffer.getvalue()
+
+    # 🔥 Store in memory cache
+    CACHE[cache_key] = audio_data
+
+    return Response(content=audio_data, media_type="audio/wav")
