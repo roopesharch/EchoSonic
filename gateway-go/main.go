@@ -17,12 +17,12 @@ func main() {
 	defer conn.Close()
 	client := pb.NewVoiceServiceClient(conn)
 
-	// Route 1: Home/Health Check
+	// Home route
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("🚀 EchoSonic API is running on Branch 01"))
+		w.Write([]byte("🚀 EchoSonic API is Live"))
 	})
 
-	// Route 2: Speak (Trigger AI)
+	// Speak route
 	http.HandleFunc("/speak", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
@@ -34,39 +34,46 @@ func main() {
 		r.ParseForm()
 		speed, _ := strconv.ParseFloat(r.FormValue("speed"), 32)
 
-		_, _ = client.Speak(context.Background(), &pb.SpeakRequest{
+		// Blocks until Python confirms the file is written
+		resp, err := client.Speak(context.Background(), &pb.SpeakRequest{
 			Text:  r.FormValue("text"),
 			Voice: r.FormValue("voice"),
 			Speed: float32(speed),
-			Noise: 0.667,
 		})
+
+		if err != nil || !resp.Success {
+			w.WriteHeader(500)
+			return
+		}
 		w.WriteHeader(200)
 	})
 
-	// Route 3: Listen (Stream Audio)
+	// Listen route with File Verification
 	http.HandleFunc("/listen", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		filePath := "/app/shared_output.wav"
 
-		// SYNC LOCK: Wait for file to have actual audio data
-		for i := 0; i < 10; i++ {
+		var finalInfo os.FileInfo
+		// Check the file up to 15 times (approx 7 seconds)
+		for i := 0; i < 15; i++ {
 			info, err := os.Stat(filePath)
 			if err == nil && info.Size() > 100 {
+				finalInfo = info
 				break
 			}
-			time.Sleep(400 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 		}
 
-		file, err := os.Open(filePath)
-		if err != nil {
-			http.Error(w, "File busy or not found", 404)
+		if finalInfo == nil {
+			http.Error(w, "File not ready or empty", 404)
 			return
 		}
+
+		file, _ := os.Open(filePath)
 		defer file.Close()
 
-		info, _ := file.Stat()
 		w.Header().Set("Content-Type", "audio/wav")
-		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+		w.Header().Set("Content-Length", strconv.FormatInt(finalInfo.Size(), 10))
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
 		http.ServeContent(w, r, "output.wav", time.Now(), file)
