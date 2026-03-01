@@ -6,7 +6,7 @@ import voice_pb2
 import voice_pb2_grpc
 from piper.voice import PiperVoice 
 
-# Memory cache for voices to keep them "warm"
+# Global Cache: Keeps the model in RAM for high speed
 VOICE_MODELS = {}
 
 class VoiceService(voice_pb2_grpc.VoiceServiceServicer):
@@ -16,37 +16,38 @@ class VoiceService(voice_pb2_grpc.VoiceServiceServicer):
         output_path = "/app/shared_output.wav"
 
         try:
-            # Load into RAM if not already there for speed
+            # Load into RAM if not already there
             if request.voice not in VOICE_MODELS:
                 print(f"--- 🧠 Loading {request.voice} into RAM ---")
                 VOICE_MODELS[request.voice] = PiperVoice.load(model_path)
             
             voice = VOICE_MODELS[request.voice]
 
-            # Delete old file to prevent the browser from playing old data
+            # Clear old file to prevent race conditions
             if os.path.exists(output_path):
                 os.remove(output_path)
 
-            # Synthesize
+            # Synthesize and close properly
             with wave.open(output_path, "wb") as wav_file:
                 voice.synthesize(request.text, wav_file)
             
-            # CRITICAL: Force the OS to flush the file to disk
+            # CRITICAL: Force the Linux filesystem to sync data to disk
             os.sync() 
             
-            file_size = os.path.getsize(output_path)
-            print(f"✅ Python finalized {file_size} bytes for {request.voice}")
-            
+            size = os.path.getsize(output_path)
+            print(f"✅ Python finalized {size} bytes")
             return voice_pb2.SpeakResponse(success=True)
+
         except Exception as e:
             print(f"🔥 Python Error: {e}")
             return voice_pb2.SpeakResponse(success=False)
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
+    # Use a small pool to prevent Render from running out of memory
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
     voice_pb2_grpc.add_VoiceServiceServicer_to_server(VoiceService(), server)
     server.add_insecure_port('[::]:50051')
-    print("🚀 Speed-Optimized Engine (Branch 01) Live...")
+    print("🚀 Fast AI Engine (Branch 01) Live...")
     server.start()
     server.wait_for_termination()
 

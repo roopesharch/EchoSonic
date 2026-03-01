@@ -17,12 +17,11 @@ func main() {
 	defer conn.Close()
 	client := pb.NewVoiceServiceClient(conn)
 
-	// Home route
+	// Health check to prevent 404 on home URL
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("🚀 EchoSonic API is Live"))
+		w.Write([]byte("🚀 EchoSonic API is Live on Branch 01"))
 	})
 
-	// Speak route
 	http.HandleFunc("/speak", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
@@ -34,7 +33,6 @@ func main() {
 		r.ParseForm()
 		speed, _ := strconv.ParseFloat(r.FormValue("speed"), 32)
 
-		// Blocks until Python confirms the file is written
 		resp, err := client.Speak(context.Background(), &pb.SpeakRequest{
 			Text:  r.FormValue("text"),
 			Voice: r.FormValue("voice"),
@@ -48,34 +46,33 @@ func main() {
 		w.WriteHeader(200)
 	})
 
-	// Listen route with File Verification
 	http.HandleFunc("/listen", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		filePath := "/app/shared_output.wav"
 
-		var finalInfo os.FileInfo
-		// Check the file up to 15 times (approx 7 seconds)
+		// SYNC LOCK: Verify file has size before serving
+		var validFile bool
 		for i := 0; i < 15; i++ {
 			info, err := os.Stat(filePath)
 			if err == nil && info.Size() > 100 {
-				finalInfo = info
+				validFile = true
 				break
 			}
 			time.Sleep(500 * time.Millisecond)
 		}
 
-		if finalInfo == nil {
-			http.Error(w, "File not ready or empty", 404)
+		if !validFile {
+			http.Error(w, "File not ready", 404)
 			return
 		}
 
 		file, _ := os.Open(filePath)
 		defer file.Close()
 
+		info, _ := file.Stat()
 		w.Header().Set("Content-Type", "audio/wav")
-		w.Header().Set("Content-Length", strconv.FormatInt(finalInfo.Size(), 10))
+		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-
 		http.ServeContent(w, r, "output.wav", time.Now(), file)
 	})
 
