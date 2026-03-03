@@ -1,46 +1,194 @@
-<button id="adminLoginBtn" onclick="loginAdmin()" style="background:#1e293b; font-size:12px; padding:5px 10px;">Admin Login</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EchoSonic — AI Text to Voice</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter', sans-serif; background:#0f172a; color:#f1f5f9; display: flex; flex-direction: column; min-height: 100vh; }
+
+/* Main Content */
+.hero { text-align:center; padding:80px 20px 40px; background:linear-gradient(135deg,#0f172a,#1e293b); }
+.hero h1 { font-size:42px; font-weight:800; margin-bottom:15px; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero p { font-size:17px; color:#94a3b8; max-width:600px; margin:auto; }
+
+.generator-section { background:#111827; padding:40px 20px; flex-grow: 1; }
+.container { max-width:700px; margin:auto; }
+
+textarea { width:100%; height:140px; padding:20px; border-radius:12px; border:2px solid #334155; background:#1e293b; font-size:16px; margin-top:20px; resize:none; color: #f1f5f9; outline: none; transition: border-color 0.3s; }
+textarea:focus { border-color: #3b82f6; }
+
+.controls-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 15px; }
+.char-counter { font-size:13px; color:#94a3b8; margin-left: auto; }
+
+select, button { padding:12px 20px; border-radius:8px; border:none; font-size:15px; font-weight: 600; }
+button { background:#3b82f6; color:white; cursor:pointer; transition: 0.2s; }
+button:hover:not(:disabled) { background:#2563eb; transform: translateY(-1px); }
+button:disabled { background:#475569; opacity: 0.6; }
+
+#downloadBtn { background:#10b981; display:none; }
+#downloadBtn:hover { background:#059669; }
+
+.status-box { margin-top:20px; padding: 15px; border-radius: 8px; background: #1e293b; color: #94a3b8; font-size: 14px; min-height: 50px; border: 1px solid #334155; }
+audio { margin-top:20px; width:100%; height: 40px; }
+
+/* Footer & Hidden Admin */
+.footer { text-align:center; padding:40px; font-size:13px; color:#64748b; border-top: 1px solid #1e293b; }
+.admin-trigger { cursor: pointer; color: #334155; text-decoration: underline; transition: color 0.3s; }
+.admin-trigger:hover { color: #64748b; }
+.admin-active-label { color: #10b981; font-weight: bold; margin-bottom: 10px; display: none; }
+</style>
+</head>
+
+<body>
+<section class="hero">
+    <h1>🎙 EchoSonic AI</h1>
+    <p>Professional Text-to-Speech for everyone. High fidelity, low latency.</p>
+</section>
+
+<section class="generator-section">
+<div class="container">
+    <div id="adminLabel" class="admin-active-label">⚡ ADMIN MODE ACTIVE: UNLIMITED ACCESS</div>
+    
+    <textarea id="textInput" maxlength="250" placeholder="Paste your text here..."></textarea>
+    
+    <div class="controls-row">
+        <select id="voiceSelect">
+            <option value="en_US-amy-low.onnx">Amy (Female)</option>
+            <option value="en_US-ryan-low.onnx">Ryan (Male)</option>
+        </select>
+        
+        <select id="speedSelect">
+            <option value="0.75">0.75x</option>
+            <option value="1" selected>1.0x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+        </select>
+
+        <div class="char-counter"><span id="charCount">0</span> / 250</div>
+    </div>
+
+    <button id="generateBtn" onclick="speak()">Generate Speech</button>
+    <button id="downloadBtn" onclick="downloadAudio()">Download .WAV</button>
+
+    <div id="status" class="status-box">Ready to synthesize...</div>
+    <audio id="audioPlayer" controls></audio>
+</div>
+</section>
+
+<footer class="footer">
+    <p>© 2026 EchoSonic AI • Built by Roopesh</p>
+    <p style="margin-top:10px;">
+        <span id="adminToggle" class="admin-trigger" onclick="handleAdmin()">Admin Mode</span>
+    </p>
+</footer>
 
 <script>
-// ... (keep existing variables)
+const textInput = document.getElementById("textInput");
+const charCount = document.getElementById("charCount");
+const statusDiv = document.getElementById("status");
+const audioPlayer = document.getElementById("audioPlayer");
+const adminToggle = document.getElementById("adminToggle");
+const adminLabel = document.getElementById("adminLabel");
+
+const BACKEND_URL = "https://echosonic-backend-864726775563.us-central1.run.app";
 let adminToken = localStorage.getItem("echo_admin_token");
 
-// Update UI if already logged in
+// Check login status on load
 if (adminToken) {
-    document.getElementById("textInput").removeAttribute("maxlength");
-    document.getElementById("adminLoginBtn").innerText = "Admin: ON";
-    document.getElementById("adminLoginBtn").style.background = "#059669";
+    enableAdminUI();
 }
 
-async function loginAdmin() {
-    const code = prompt("Enter 6-digit Authenticator Code:");
+function enableAdminUI() {
+    adminLabel.style.display = "block";
+    adminToggle.innerText = "Logout Admin";
+    textInput.removeAttribute("maxlength");
+    charCount.innerText = "Admin: Unlimited";
+    textInput.placeholder = "Enter unlimited text (Admin)...";
+}
+
+async function handleAdmin() {
+    if (adminToken) {
+        if(confirm("Logout of Admin Mode?")) {
+            localStorage.removeItem("echo_admin_token");
+            location.reload();
+        }
+        return;
+    }
+
+    const code = prompt("Enter 6-digit MFA Code:");
     if (!code) return;
 
     try {
+        statusDiv.innerText = "Verifying MFA...";
         const response = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`);
         const data = await response.json();
-
+        
         if (data.success) {
             localStorage.setItem("echo_admin_token", data.token);
-            alert("Authenticated! Character limits removed.");
-            location.reload(); // Refresh to update UI
+            alert("MFA Verified. Welcome, Roopesh.");
+            location.reload();
         } else {
-            alert("Invalid code.");
+            statusDiv.innerText = "Invalid MFA Code.";
+            alert("Verification Failed.");
         }
-    } catch (err) {
-        alert("Verification failed. Check backend.");
+    } catch (e) {
+        statusDiv.innerText = "Error connecting to auth server.";
     }
 }
 
-async function speak() {
-    // ... inside your speak function, update the fetch URL:
-    let url = `${BACKEND_URL}/synthesize?text=${encodeURIComponent(text)}&voice=${voice}`;
-    
-    // Attach token if it exists
-    if (adminToken) {
-        url += `&token=${adminToken}`;
+textInput.addEventListener("input", () => {
+    if (!adminToken) {
+        charCount.innerText = `${textInput.value.length} / 250`;
     }
-    
-    const response = await fetch(url);
-    // ... rest of the audio handling code
+});
+
+async function speak() {
+    const text = textInput.value.trim();
+    const voice = document.getElementById("voiceSelect").value;
+    const speed = document.getElementById("speedSelect").value;
+
+    if (!text) return;
+
+    statusDiv.innerText = "Synthesizing... please wait.";
+    document.getElementById("generateBtn").disabled = true;
+
+    let url = `${BACKEND_URL}/synthesize?text=${encodeURIComponent(text)}&voice=${voice}`;
+    if (adminToken) url += `&token=${adminToken}`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error();
+
+        const blob = await response.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        
+        audioPlayer.src = audioUrl;
+        audioPlayer.playbackRate = parseFloat(speed);
+        audioPlayer.play();
+        
+        statusDiv.innerText = "Generation complete.";
+        document.getElementById("downloadBtn").style.display = "inline-block";
+        
+        // Save for download
+        window.lastBlob = blob;
+    } catch (e) {
+        statusDiv.innerText = "Error: Text too long or Auth expired.";
+    } finally {
+        document.getElementById("generateBtn").disabled = false;
+    }
+}
+
+function downloadAudio() {
+    if (!window.lastBlob) return;
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(window.lastBlob);
+    link.download = `EchoSonic_${Date.now()}.wav`;
+    link.click();
 }
 </script>
+</body>
+</html>

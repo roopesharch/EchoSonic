@@ -20,10 +20,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuration from Environment Variables
+# Configuration from Environment Variables (GCP Cloud Run)
 ENGINE_DIR = "engine-python"
+# The secret you added to Cloud Run
 OTP_SECRET = os.getenv("ADMIN_OTP_SECRET", "KRXW4Z3DPNUXIIDB") 
-JWT_SECRET = os.getenv("JWT_SECRET", "fallback-secret-change-this-in-gcp")
+# Recommended: Set a custom JWT_SECRET in GCP Variables for production
+JWT_SECRET = os.getenv("JWT_SECRET", "echosonic-secure-jwt-2026")
 ALGORITHM = "HS256"
 
 AVAILABLE_VOICES = {
@@ -47,7 +49,7 @@ def load_all_models():
 def verify_otp(code: str):
     totp = pyotp.TOTP(OTP_SECRET)
     if totp.verify(code):
-        # Token expires in 4 hours
+        # Token valid for 4 hours
         expires = datetime.utcnow() + timedelta(hours=4)
         to_encode = {"exp": expires, "sub": "admin"}
         encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
@@ -70,10 +72,10 @@ def synthesize(
         except JWTError:
             pass
 
-    # Admin bypasses the 250 character limit
+    # Logic enforcement
     max_len = 5000 if is_admin else 250
     if len(text) > max_len:
-        raise HTTPException(status_code=400, detail=f"Text too long. Max {max_len} chars.")
+        raise HTTPException(status_code=400, detail=f"Limit exceeded. Max {max_len} chars.")
 
     if voice not in VOICE_MODELS:
         voice = "en_US-amy-low.onnx"
