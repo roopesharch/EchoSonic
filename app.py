@@ -3,9 +3,12 @@ import wave
 import threading
 import os
 import hashlib
-from fastapi import FastAPI, Query
+import pyotp
+from datetime import datetime, timedelta
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
+from jose import JWTError, jwt
 from piper.voice import PiperVoice
 
 app = FastAPI()
@@ -17,7 +20,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configuration from Environment Variables
 ENGINE_DIR = "engine-python"
+OTP_SECRET = os.getenv("ADMIN_OTP_SECRET", "KRXW4Z3DPNUXIIDB") 
+JWT_SECRET = os.getenv("JWT_SECRET", "fallback-secret-change-this-in-gcp")
+ALGORITHM = "HS256"
 
 AVAILABLE_VOICES = {
     "en_US-amy-low.onnx": os.path.join(ENGINE_DIR, "en_US-amy-low.onnx"),
@@ -28,26 +35,50 @@ VOICE_MODELS = {}
 CACHE = {}
 synth_lock = threading.Lock()
 
-# 🔥 Preload all models at startup
 @app.on_event("startup")
 def load_all_models():
     print("Loading voice models...")
     for voice_name, model_path in AVAILABLE_VOICES.items():
-        VOICE_MODELS[voice_name] = PiperVoice.load(model_path)
+        if os.path.exists(model_path):
+            VOICE_MODELS[voice_name] = PiperVoice.load(model_path)
     print("All models loaded.")
+
+@app.get("/verify-otp")
+def verify_otp(code: str):
+    totp = pyotp.TOTP(OTP_SECRET)
+    if totp.verify(code):
+        # Token expires in 4 hours
+        expires = datetime.utcnow() + timedelta(hours=4)
+        to_encode = {"exp": expires, "sub": "admin"}
+        encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
+        return {"success": True, "token": encoded_jwt}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid OTP code")
 
 @app.get("/synthesize")
 def synthesize(
     text: str = Query(..., min_length=1),
-    voice: str = Query("en_US-amy-low.onnx")
+    voice: str = Query("en_US-amy-low.onnx"),
+    token: str = Query(None)
 ):
+    is_admin = False
+    if token:
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+            if payload.get("sub") == "admin":
+                is_admin = True
+        except JWTError:
+            pass
+
+    # Admin bypasses the 250 character limit
+    max_len = 5000 if is_admin else 250
+    if len(text) > max_len:
+        raise HTTPException(status_code=400, detail=f"Text too long. Max {max_len} chars.")
+
     if voice not in VOICE_MODELS:
         voice = "en_US-amy-low.onnx"
 
-    # 🔥 Create cache key
     cache_key = hashlib.md5((voice + text).encode()).hexdigest()
-
-    # If already generated → return instantly
     if cache_key in CACHE:
         return Response(content=CACHE[cache_key], media_type="audio/wav")
 
@@ -65,8 +96,6 @@ def synthesize(
                     wav_file.writeframes(chunk.audio_int16_bytes)
 
     audio_data = buffer.getvalue()
-
-    # 🔥 Store in memory cache
     CACHE[cache_key] = audio_data
 
     return Response(content=audio_data, media_type="audio/wav")
