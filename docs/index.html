@@ -4,217 +4,74 @@
     <meta charset="UTF-8">
     <title>EchoSonic — AI Text to Voice</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
     <link rel="icon" type="image/png" href="../img/echosonic.png">
-    <link rel="apple-touch-icon" href="../img/echosonic.png">
-
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f172a;
-            --card-bg: #1e293b;
-            --accent: #3b82f6;
+            --bg: #0f172a; --card-bg: #1e293b; --accent: #3b82f6;
             --accent-gradient: linear-gradient(135deg, #60a5fa, #a78bfa);
-            --success: #10b981;
-            --error: #ef4444;
-            --text-main: #f1f5f9;
-            --text-dim: #94a3b8;
-            --border: #334155;
+            --success: #10b981; --error: #ef4444; --text-main: #f1f5f9;
+            --text-dim: #94a3b8; --border: #334155;
         }
-
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: var(--bg); 
-            color: var(--text-main); 
-            display: flex; 
-            flex-direction: column; 
-            min-height: 100vh;
-            line-height: 1.5;
-        }
-
-        .hero { 
-            text-align: center; 
-            padding: 50px 20px; 
-            background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
-        }
-        .brand-logo {
-            width: 80px;
-            height: auto;
-            margin-bottom: 20px;
-            filter: drop-shadow(0 0 15px rgba(96, 165, 250, 0.4));
-        }
-        .hero h1 { 
-            font-size: clamp(32px, 5vw, 48px); 
-            font-weight: 800; 
-            margin-bottom: 12px; 
-            background: var(--accent-gradient); 
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent; 
-            letter-spacing: -1px;
-        }
-        .hero p { font-size: 18px; color: var(--text-dim); max-width: 600px; margin: auto; }
-
-        .generator-section { padding: 20px; flex-grow: 1; display: flex; align-items: flex-start; }
-        .container { 
-            max-width: 760px; 
-            width: 100%;
-            margin: auto; 
-            background: rgba(30, 41, 59, 0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            padding: 30px;
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-        }
-
-        .admin-active-label { 
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            display: none;
-            text-align: center;
-            margin-bottom: 20px;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .input-wrapper { position: relative; }
-        textarea { 
-            width: 100%; 
-            height: 180px; 
-            padding: 20px; 
-            border-radius: 16px; 
-            border: 2px solid var(--border); 
-            background: #0f172a; 
-            font-size: 16px; 
-            color: var(--text-main); 
-            outline: none; 
-            transition: all 0.3s;
-            font-family: inherit;
-            resize: none;
-        }
-        textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-        
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        .hero { text-align: center; padding: 50px 20px; background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%); }
+        .brand-logo { width: 200px; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(96, 165, 250, 0.4)); }
+        .hero h1 { font-size: 48px; font-weight: 800; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; }
+        .container { max-width: 760px; width: 95%; margin: auto; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid var(--border); padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .admin-active-label { background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none; text-align: center; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3); text-transform: uppercase; }
+        textarea { width: 100%; height: 180px; padding: 20px; border-radius: 16px; border: 2px solid var(--border); background: #0f172a; color: white; font-size: 16px; outline: none; transition: 0.3s; resize: none; }
+        textarea:focus { border-color: var(--accent); }
         .char-counter { font-size: 12px; text-align: right; margin-top: 8px; color: var(--text-dim); }
-        .char-counter.limit-near { color: var(--error); font-weight: bold; }
-
-        .controls-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-            gap: 15px; 
-            margin-top: 20px; 
-        }
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
         .control-group { display: flex; flex-direction: column; gap: 8px; }
         label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
-
-        select { 
-            padding: 12px; 
-            border-radius: 10px; 
-            background: var(--card-bg); 
-            border: 1px solid var(--border); 
-            color: white; 
-            outline: none;
-        }
-
+        select { padding: 12px; border-radius: 10px; background: var(--card-bg); border: 1px solid var(--border); color: white; }
         .actions { display: flex; gap: 12px; margin-top: 25px; }
-        button { 
-            flex: 1;
-            padding: 14px 24px; 
-            border-radius: 12px; 
-            border: none; 
-            font-size: 15px; 
-            font-weight: 600; 
-            cursor: pointer; 
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
+        button { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         #generateBtn { background: var(--accent); color: white; }
-        #generateBtn:hover:not(:disabled) { background: #2563eb; }
-        
         #downloadBtn { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); display: none; }
-        #downloadBtn:hover { background: var(--success); color: white; }
-
-        .voice-wave {
-            display: none;
-            justify-content: center;
-            align-items: center;
-            gap: 4px;
-            height: 20px;
-            margin-top: 15px;
-        }
-        .bar { width: 3px; height: 100%; background: var(--accent); border-radius: 10px; animation: wave 1s ease-in-out infinite; }
+        .voice-wave { display: none; justify-content: center; gap: 4px; height: 20px; margin-top: 15px; }
+        .bar { width: 3px; height: 100%; background: var(--accent); animation: wave 1s infinite; }
         @keyframes wave { 0%, 100% { height: 5px; } 50% { height: 20px; } }
-
         .status-box { margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-dim); }
-        audio { 
-            margin-top: 15px; 
-            width: 100%; 
-            filter: invert(100%) hue-rotate(180deg) brightness(1.5);
-        }
-
+        audio { margin-top: 15px; width: 100%; filter: invert(100%) hue-rotate(180deg); }
         .footer { text-align: center; padding: 40px; font-size: 12px; color: #475569; }
-        .admin-trigger { cursor: pointer; color: #334155; text-decoration: none; transition: 0.2s; }
-        .admin-trigger:hover { color: var(--accent); }
+        .admin-trigger { cursor: pointer; color: #334155; text-decoration: none; }
     </style>
 </head>
-
 <body>
 <section class="hero">
     <img src="../img/echosonic.png" alt="EchoSonic Logo" class="brand-logo">
     <h1>EchoSonic AI</h1>
-    <p>Professional Text-to-Voice Synthesis</p>
 </section>
-
 <section class="generator-section">
 <div class="container">
-    <div id="adminLabel" class="admin-active-label">⚡ PRO MODE ACTIVE: UNLIMITED QUOTA</div>
-    
-    <div class="input-wrapper">
-        <textarea id="textInput" placeholder="Enter your text (Ctrl+Enter to generate)..."></textarea>
-        <div class="char-counter" id="counterBox"><span id="charCount">0</span> / 500</div>
-    </div>
-    
+    <div id="adminLabel" class="admin-active-label">⚡ PRO MODE: UNLIMITED QUOTA</div>
+    <textarea id="textInput" placeholder="Enter text (Ctrl+Enter to generate)..."></textarea>
+    <div class="char-counter" id="counterBox"><span id="charCount">0</span> / 500</div>
     <div class="controls-grid">
-        <div class="control-group">
-            <label>Voice</label>
+        <div class="control-group"><label>Voice</label>
             <select id="voiceSelect">
                 <option value="en_US-amy-low.onnx">Amy (Female)</option>
                 <option value="en_US-ryan-low.onnx">Ryan (Male)</option>
             </select>
         </div>
-        <div class="control-group">
-            <label>Speed</label>
+        <div class="control-group"><label>Speed</label>
             <select id="speedSelect">
-                <option value="0.75">0.75x</option>
-                <option value="1" selected>1.0x</option>
-                <option value="1.25">1.25x</option>
-                <option value="1.5">1.5x</option>
+                <option value="0.75">0.75x</option><option value="1" selected>1.0x</option><option value="1.5">1.5x</option>
             </select>
         </div>
     </div>
-
     <div class="actions">
         <button id="generateBtn" onclick="speak()">Generate</button>
         <button id="downloadBtn" onclick="downloadAudio()">Download .WAV</button>
     </div>
-
-    <div class="voice-wave" id="waveAnim">
-        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-    </div>
-
-    <div id="status" class="status-box">Ready to synthesize</div>
+    <div class="voice-wave" id="waveAnim"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+    <div id="status" class="status-box">Ready</div>
     <audio id="audioPlayer" controls></audio>
 </div>
 </section>
-
 <footer class="footer">
     <p>© 2026 EchoSonic AI • Built by Roopesh</p>
     <p style="margin-top:12px;"><span id="adminToggle" class="admin-trigger" onclick="handleAdmin()">Admin Portal</span></p>
@@ -222,111 +79,75 @@
 
 <script>
     const textInput = document.getElementById("textInput");
-    const charCount = document.getElementById("charCount");
-    const counterBox = document.getElementById("counterBox");
     const statusDiv = document.getElementById("status");
     const audioPlayer = document.getElementById("audioPlayer");
-    const adminToggle = document.getElementById("adminToggle");
     const adminLabel = document.getElementById("adminLabel");
-    const generateBtn = document.getElementById("generateBtn");
     const waveAnim = document.getElementById("waveAnim");
 
-    // Dynamic Backend Detection
-    const PRODUCTION_URL = "https://echosonic-backend-864726775563.us-central1.run.app";
     const BACKEND_URL = window.location.hostname.includes("github.dev") ? 
-                        `https://${window.location.hostname.replace(/-\d+\.app/, "-8080.app")}` : PRODUCTION_URL;
+                        `https://${window.location.hostname.replace(/-\d+\.app/, "-8080.app")}` : 
+                        "https://echosonic-backend-864726775563.us-central1.run.app";
 
     let adminToken = localStorage.getItem("echo_admin_token");
     let LIMIT = 500;
 
     if (adminToken) {
-        LIMIT = 10000;
         adminLabel.style.display = "block";
         textInput.removeAttribute("maxlength");
-        counterBox.innerText = "Unlimited Access";
+        document.getElementById("counterBox").innerText = "Unlimited Pro Access";
     } else {
         textInput.setAttribute("maxlength", LIMIT);
     }
 
     textInput.addEventListener("input", () => {
-        if (!adminToken) {
-            const len = textInput.value.length;
-            charCount.innerText = len;
-            if (len >= LIMIT - 20) counterBox.classList.add("limit-near");
-            else counterBox.classList.remove("limit-near");
-        }
-    });
-
-    // Keyboard shortcut (Ctrl + Enter)
-    textInput.addEventListener("keydown", (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") speak();
+        if (!adminToken) document.getElementById("charCount").innerText = textInput.value.length;
     });
 
     async function speak() {
         const text = textInput.value.trim();
         if (!text) return;
 
-        statusDiv.innerText = "Synthesizing audio...";
+        statusDiv.innerText = "Processing...";
         waveAnim.style.display = "flex";
-        generateBtn.disabled = true;
-
+        
         let url = `${BACKEND_URL}/synthesize?text=${encodeURIComponent(text)}&voice=${document.getElementById("voiceSelect").value}`;
         if (adminToken) url += `&token=${adminToken}`;
 
         try {
             const response = await fetch(url);
-            
-            // Handle Quota Error (IP Tracker)
             if (response.status === 429) {
-                statusDiv.innerHTML = "<span style='color:var(--error)'>Daily limit of 5 reached! Access Admin for more.</span>";
-                throw new Error("Quota exceeded");
+                statusDiv.innerHTML = "<span style='color:var(--error)'>Daily limit of 5 reached! Login to Admin for more.</span>";
+                return;
             }
-            
-            if (!response.ok) throw new Error("Server error");
+            if (!response.ok) throw new Error("Error");
 
             const blob = await response.blob();
             audioPlayer.src = URL.createObjectURL(blob);
             audioPlayer.playbackRate = parseFloat(document.getElementById("speedSelect").value);
             audioPlayer.play();
-            
-            statusDiv.innerText = "Generation complete!";
-            document.getElementById("downloadBtn").style.display = "flex";
+            statusDiv.innerText = "Complete!";
+            document.getElementById("downloadBtn").style.display = "block";
             window.lastBlob = blob;
         } catch (e) {
-            if (e.message !== "Quota exceeded") {
-                statusDiv.innerText = "Connection error. Ensure backend is running.";
-            }
+            statusDiv.innerText = "Server error. Try again.";
         } finally {
             waveAnim.style.display = "none";
-            generateBtn.disabled = false;
         }
     }
 
     function downloadAudio() {
-        if (!window.lastBlob) return;
         const link = document.createElement("a");
         link.href = URL.createObjectURL(window.lastBlob);
-        link.download = `EchoSonic_${Date.now()}.wav`;
+        link.download = "speech.wav";
         link.click();
     }
 
     async function handleAdmin() {
-        if (adminToken) {
-            if(confirm("Logout from Admin?")) {
-                localStorage.removeItem("echo_admin_token");
-                location.reload();
-            }
-            return;
-        }
+        if (adminToken) { localStorage.removeItem("echo_admin_token"); location.reload(); return; }
         const code = prompt("Enter MFA Code:");
         if (!code) return;
-        try {
-            const res = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`).then(r => r.json());
-            if (res.success) {
-                localStorage.setItem("echo_admin_token", res.token);
-                location.reload();
-            } else { alert("Invalid code."); }
-        } catch (e) { alert("Auth server unreachable."); }
+        const res = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`).then(r => r.json());
+        if (res.success) { localStorage.setItem("echo_admin_token", res.token); location.reload(); }
     }
 </script>
 </body>
