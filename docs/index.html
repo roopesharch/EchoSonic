@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <title>EchoSonic — AI Text to Voice</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="../img/echosonic.png">
+    
+    <link rel="icon" type="image/png" href="img/echosonic.png">
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -16,10 +18,7 @@
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
         .hero { text-align: center; padding: 50px 20px; background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%); }
-        
-        /* Updated to your 200px preference */
         .brand-logo { width: 200px; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(96, 165, 250, 0.4)); }
-        
         .hero h1 { font-size: 48px; font-weight: 800; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; }
         .container { max-width: 760px; width: 95%; margin: auto; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid var(--border); padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         .admin-active-label { background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none; text-align: center; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3); text-transform: uppercase; }
@@ -41,18 +40,18 @@
         audio { margin-top: 15px; width: 100%; filter: invert(100%) hue-rotate(180deg); }
         .footer { text-align: center; padding: 40px; font-size: 12px; color: #475569; }
         .admin-trigger { cursor: pointer; color: #334155; text-decoration: none; font-weight: 600; }
-        .logout-btn { color: var(--error) !important; margin-left: 10px; }
+        .logout-btn { color: var(--error) !important; margin-left: 10px; font-weight: 800; }
     </style>
 </head>
 <body>
 <section class="hero">
-    <img src="../img/echosonic.png" alt="EchoSonic Logo" class="brand-logo">
+    <img src="img/echosonic.png" alt="EchoSonic Logo" class="brand-logo">
     <h1>EchoSonic AI</h1>
 </section>
 <section class="generator-section">
 <div class="container">
-    <div id="adminLabel" class="admin-active-label">⚡ PRO MODE: UNLIMITED QUOTA + COUNTER RESET</div>
-    <textarea id="textInput" placeholder="Enter text (Ctrl+Enter to generate)..."></textarea>
+    <div id="adminLabel" class="admin-active-label">⚡ PRO MODE: QUOTA WILL RESET ON GENERATE</div>
+    <textarea id="textInput" placeholder="Enter text here..."></textarea>
     <div class="char-counter" id="counterBox"><span id="charCount">0</span> / 500</div>
     <div class="controls-grid">
         <div class="control-group"><label>Voice</label>
@@ -100,13 +99,12 @@
     let adminToken = localStorage.getItem("echo_admin_token");
     let LIMIT = 500;
 
-    // UI State Management
     if (adminToken) {
         adminLabel.style.display = "block";
         textInput.removeAttribute("maxlength");
-        document.getElementById("counterBox").innerText = "Unlimited Pro Access (Quota Reset)";
-        adminToggle.innerText = "Admin Session Active";
-        logoutContainer.innerHTML = '<a href="#" class="admin-trigger logout-btn" onclick="logout()">[Logout]</a>';
+        document.getElementById("counterBox").innerText = "Pro Access Active";
+        adminToggle.innerText = "Admin Portal [Logged In]";
+        logoutContainer.innerHTML = '<a href="#" class="admin-trigger logout-btn" onclick="logout()">LOGOUT</a>';
     } else {
         textInput.setAttribute("maxlength", LIMIT);
     }
@@ -118,8 +116,7 @@
     async function speak() {
         const text = textInput.value.trim();
         if (!text) return;
-
-        statusDiv.innerText = "Processing...";
+        statusDiv.innerText = "Generating...";
         waveAnim.style.display = "flex";
         
         let url = `${BACKEND_URL}/synthesize?text=${encodeURIComponent(text)}&voice=${document.getElementById("voiceSelect").value}`;
@@ -128,7 +125,7 @@
         try {
             const response = await fetch(url);
             if (response.status === 429) {
-                statusDiv.innerHTML = "<span style='color:var(--error)'>Daily limit reached! Access Admin to reset.</span>";
+                statusDiv.innerHTML = "<span style='color:var(--error)'>Limit reached! Login as Admin & Click Generate to Reset.</span>";
                 return;
             }
             if (!response.ok) throw new Error("Error");
@@ -141,38 +138,30 @@
             document.getElementById("downloadBtn").style.display = "block";
             window.lastBlob = blob;
         } catch (e) {
-            statusDiv.innerText = "Server error. Try again.";
+            statusDiv.innerText = "Connection error.";
         } finally {
             waveAnim.style.display = "none";
         }
     }
 
     function downloadAudio() {
-        if(!window.lastBlob) return;
         const link = document.createElement("a");
         link.href = URL.createObjectURL(window.lastBlob);
-        link.download = `echosonic_${Date.now()}.wav`;
+        link.download = "echo_sonic.wav";
         link.click();
     }
 
     async function handleAdmin() {
-        if (adminToken) return; 
+        if (adminToken) return;
         const code = prompt("Enter MFA Code:");
         if (!code) return;
-        try {
-            const res = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`).then(r => r.json());
-            if (res.success) {
-                localStorage.setItem("echo_admin_token", res.token);
-                location.reload();
-            } else { alert("Invalid code."); }
-        } catch (e) { alert("Server unreachable."); }
+        const res = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`).then(r => r.json());
+        if (res.success) { localStorage.setItem("echo_admin_token", res.token); location.reload(); }
     }
 
     function logout() {
-        if(confirm("Are you sure you want to logout?")) {
-            localStorage.removeItem("echo_admin_token");
-            location.reload();
-        }
+        localStorage.removeItem("echo_admin_token");
+        location.reload();
     }
 </script>
 </body>
