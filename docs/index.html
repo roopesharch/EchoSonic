@@ -16,7 +16,10 @@
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
         .hero { text-align: center; padding: 50px 20px; background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%); }
+        
+        /* Updated to your 200px preference */
         .brand-logo { width: 200px; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(96, 165, 250, 0.4)); }
+        
         .hero h1 { font-size: 48px; font-weight: 800; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; }
         .container { max-width: 760px; width: 95%; margin: auto; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid var(--border); padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
         .admin-active-label { background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none; text-align: center; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3); text-transform: uppercase; }
@@ -37,7 +40,8 @@
         .status-box { margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-dim); }
         audio { margin-top: 15px; width: 100%; filter: invert(100%) hue-rotate(180deg); }
         .footer { text-align: center; padding: 40px; font-size: 12px; color: #475569; }
-        .admin-trigger { cursor: pointer; color: #334155; text-decoration: none; }
+        .admin-trigger { cursor: pointer; color: #334155; text-decoration: none; font-weight: 600; }
+        .logout-btn { color: var(--error) !important; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -47,7 +51,7 @@
 </section>
 <section class="generator-section">
 <div class="container">
-    <div id="adminLabel" class="admin-active-label">⚡ PRO MODE: UNLIMITED QUOTA</div>
+    <div id="adminLabel" class="admin-active-label">⚡ PRO MODE: UNLIMITED QUOTA + COUNTER RESET</div>
     <textarea id="textInput" placeholder="Enter text (Ctrl+Enter to generate)..."></textarea>
     <div class="char-counter" id="counterBox"><span id="charCount">0</span> / 500</div>
     <div class="controls-grid">
@@ -74,7 +78,10 @@
 </section>
 <footer class="footer">
     <p>© 2026 EchoSonic AI • Built by Roopesh</p>
-    <p style="margin-top:12px;"><span id="adminToggle" class="admin-trigger" onclick="handleAdmin()">Admin Portal</span></p>
+    <p style="margin-top:12px;">
+        <span id="adminToggle" class="admin-trigger" onclick="handleAdmin()">Admin Portal</span>
+        <span id="logoutContainer"></span>
+    </p>
 </footer>
 
 <script>
@@ -83,6 +90,8 @@
     const audioPlayer = document.getElementById("audioPlayer");
     const adminLabel = document.getElementById("adminLabel");
     const waveAnim = document.getElementById("waveAnim");
+    const adminToggle = document.getElementById("adminToggle");
+    const logoutContainer = document.getElementById("logoutContainer");
 
     const BACKEND_URL = window.location.hostname.includes("github.dev") ? 
                         `https://${window.location.hostname.replace(/-\d+\.app/, "-8080.app")}` : 
@@ -91,10 +100,13 @@
     let adminToken = localStorage.getItem("echo_admin_token");
     let LIMIT = 500;
 
+    // UI State Management
     if (adminToken) {
         adminLabel.style.display = "block";
         textInput.removeAttribute("maxlength");
-        document.getElementById("counterBox").innerText = "Unlimited Pro Access";
+        document.getElementById("counterBox").innerText = "Unlimited Pro Access (Quota Reset)";
+        adminToggle.innerText = "Admin Session Active";
+        logoutContainer.innerHTML = '<a href="#" class="admin-trigger logout-btn" onclick="logout()">[Logout]</a>';
     } else {
         textInput.setAttribute("maxlength", LIMIT);
     }
@@ -116,7 +128,7 @@
         try {
             const response = await fetch(url);
             if (response.status === 429) {
-                statusDiv.innerHTML = "<span style='color:var(--error)'>Daily limit of 5 reached! Login to Admin for more.</span>";
+                statusDiv.innerHTML = "<span style='color:var(--error)'>Daily limit reached! Access Admin to reset.</span>";
                 return;
             }
             if (!response.ok) throw new Error("Error");
@@ -136,18 +148,31 @@
     }
 
     function downloadAudio() {
+        if(!window.lastBlob) return;
         const link = document.createElement("a");
         link.href = URL.createObjectURL(window.lastBlob);
-        link.download = "speech.wav";
+        link.download = `echosonic_${Date.now()}.wav`;
         link.click();
     }
 
     async function handleAdmin() {
-        if (adminToken) { localStorage.removeItem("echo_admin_token"); location.reload(); return; }
+        if (adminToken) return; 
         const code = prompt("Enter MFA Code:");
         if (!code) return;
-        const res = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`).then(r => r.json());
-        if (res.success) { localStorage.setItem("echo_admin_token", res.token); location.reload(); }
+        try {
+            const res = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`).then(r => r.json());
+            if (res.success) {
+                localStorage.setItem("echo_admin_token", res.token);
+                location.reload();
+            } else { alert("Invalid code."); }
+        } catch (e) { alert("Server unreachable."); }
+    }
+
+    function logout() {
+        if(confirm("Are you sure you want to logout?")) {
+            localStorage.removeItem("echo_admin_token");
+            location.reload();
+        }
     }
 </script>
 </body>

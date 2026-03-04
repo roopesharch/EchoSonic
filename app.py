@@ -81,33 +81,38 @@ def synthesize(
     is_admin = False
     client_ip = get_client_ip(request)
 
+    # 1. AUTH CHECK & COUNTER RESET
     if token:
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
             if payload.get("sub") == "admin":
                 is_admin = True
+                # FEATURE: Admin login clears the counter for this IP
+                today = datetime.utcnow().strftime("%Y-%m-%d")
+                USER_QUOTAS[client_ip] = {"count": 0, "date": today}
         except JWTError:
             pass
 
-    # 1. Enforcement Logic
-    max_len = 5000 if is_admin else 500 # Increased to 500 per your request
+    # 2. Logic Enforcement
+    max_len = 5000 if is_admin else 500
     if len(text) > max_len:
         raise HTTPException(status_code=400, detail=f"Limit exceeded. Max {max_len} chars.")
 
     if not is_admin:
         if not is_quota_available(client_ip):
-            raise HTTPException(status_code=429, detail="Daily free limit (5 requests) reached.")
+            raise HTTPException(status_code=429, detail="Daily limit reached.")
 
-    # 2. Cache Check
+    # 3. Cache Check
     if voice not in VOICE_MODELS:
         voice = "en_US-amy-low.onnx"
 
     cache_key = hashlib.md5((voice + text).encode()).hexdigest()
     if cache_key in CACHE:
-        if not is_admin: USER_QUOTAS[client_ip]["count"] += 1
+        if not is_admin: 
+            USER_QUOTAS[client_ip]["count"] += 1
         return Response(content=CACHE[cache_key], media_type="audio/wav")
 
-    # 3. Synthesis (Using your original buffer logic)
+    # 4. Synthesis (Original Working Logic Restored)
     voice_model = VOICE_MODELS[voice]
     buffer = io.BytesIO()
 
@@ -124,7 +129,7 @@ def synthesize(
     audio_data = buffer.getvalue()
     CACHE[cache_key] = audio_data
 
-    # 4. Update Quota
+    # 5. Increment Quota for Non-Admins
     if not is_admin:
         USER_QUOTAS[client_ip]["count"] += 1
 
