@@ -1,47 +1,58 @@
-# 🎙️ EchoSonic AI
-**Professional-grade AI Text-to-Speech powered by Piper ONNX.**
+**EchoSonic – Cloud-Deployed AI Text-to-Speech System**
 
-EchoSonic is a production-ready TTS engine optimized for high-performance synthesis on constrained cloud infrastructure. By leveraging ONNX-based models and a FastAPI backbone, it delivers low-latency, natural-sounding speech without the high costs of proprietary APIs.
+EchoSonic is a production-ready AI Text-to-Speech (TTS) web application that converts text into natural-sounding speech using ONNX-based Piper voice models.
 
----
-
-## 🚀 Key Features
-* **High-Fidelity Synthesis:** Uses Piper ONNX models for near-human vocal quality.
-* **Performance Optimized:** In-memory MD5-based audio caching and model preloading.
-* **Multi-Voice Support:** Toggle between different personas (e.g., Amy, Ryan).
-* **Smart Rate Limiting:** Built-in character constraints with an **Admin MFA Override** for power users.
-* **Cloud-Native:** Designed specifically for Google Cloud Run (Backend) and GitHub Pages (Frontend).
-
----
-
-## 🏗️ System Architecture
-
-EchoSonic utilizes a decoupled architecture to ensure maximum uptime and zero-cost frontend hosting.
+The system is optimized for performance and designed to run efficiently on free-tier cloud infrastructure while maintaining low latency and stable concurrent processing.
 
 
+**Overview**
 
-1.  **UI (GitHub Pages):** A modern, glassmorphic React-style interface.
-2.  **API Gateway (Cloud Run):** FastAPI handles request validation and JWT-based authentication.
-3.  **Inference Engine:** Piper TTS processes text-to-audio in a thread-safe environment.
-4.  **Audio Stream:** 16-bit Mono WAV data is streamed directly back to the client for instant playback.
+EchoSonic demonstrates practical AI model integration, backend optimization, and cloud deployment strategy.
 
----
+It combines:
 
-## 🛠️ Technical Stack
-| Component | Technology |
-| :--- | :--- |
-| **Backend** | Python 3.11, FastAPI, Uvicorn |
-| **AI Engine** | Piper TTS (ONNX Runtime) |
-| **Frontend** | HTML5, CSS3 (Glassmorphism), Vanilla JS |
-| **Security** | PyOTP (MFA), JWT (JSON Web Tokens) |
-| **Deployment** | Docker, Google Cloud Run, GitHub Pages |
+FastAPI backend for high-performance API handling
 
----
+ONNX-based Piper voice models for speech synthesis
 
-## 💻 Local Development
+In-memory caching for performance acceleration
 
-### 1. Clone & Setup
-```bash
-git clone [https://github.com/YOUR_USERNAME/EchoSonic.git](https://github.com/YOUR_USERNAME/EchoSonic.git)
-cd EchoSonic
-pip install -r requirements.txt
+Thread-safe synthesis control
+
+Static frontend hosted separately for lightweight scalability
+
+The project focuses on efficient AI inference under constrained compute environments.
+
+**Architecture**
+
+Frontend (GitHub Pages)
+⬇
+REST API (FastAPI Backend)
+⬇
+Piper ONNX Voice Model
+⬇
+WAV Audio Stream Response
+
+The backend preloads all voice models at startup to eliminate repeated loading overhead and reduce request latency.
+
+Key Features
+
+Real-time text-to-speech generation
+
+Multi-voice support
+
+Model preloading during application startup
+
+In-memory MD5-based audio caching
+
+Thread-safe synthesis using global lock
+
+Adjustable playback speed (frontend)
+
+250-character input limit
+
+Daily usage restriction for free-tier sustainability
+
+Admin override mode for unrestricted testing
+
+Fully cloud-deployed architecture
