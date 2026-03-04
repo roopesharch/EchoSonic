@@ -2,3 +2,5 @@ fastapi
 uvicorn
 piper-tts
 python-multipart
+pyotp
+python-jose[cryptography]

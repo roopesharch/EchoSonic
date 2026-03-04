@@ -1,309 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>EchoSonic — AI Text to Voice</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-
-body {
-    font-family:'Inter', sans-serif;
-    background:#0f172a;
-    color:#f1f5f9;
-}
-
-.hero {
-    text-align:center;
-    padding:100px 20px 60px;
-    background:linear-gradient(135deg,#0f172a,#1e293b);
-}
-
-.hero h1 {
-    font-size:48px;
-    font-weight:800;
-    margin-bottom:20px;
-}
-
-.hero p {
-    font-size:18px;
-    color:#94a3b8;
-    max-width:600px;
-    margin:auto;
-}
-
-.generator-section {
-    background:#111827;
-    padding:60px 20px;
-}
-
-.container {
-    max-width:700px;
-    margin:auto;
-}
-
-textarea {
-    width:100%;
-    height:120px;
-    padding:15px;
-    border-radius:10px;
-    border:none;
-    font-size:16px;
-    margin-top:20px;
-    resize:none;
-    color: #1e293b;
-}
-
-.char-counter {
-    text-align:right;
-    font-size:13px;
-    margin-top:5px;
-    color:#94a3b8;
-}
-
-.limit-warning {
-    color:#ef4444;
-    font-size:13px;
-    display:none;
-}
-
-select, button {
-    padding:12px 16px;
-    border-radius:8px;
-    border:none;
-    font-size:15px;
-    margin-top:15px;
-}
-
-button {
-    background:#3b82f6;
-    color:white;
-    cursor:pointer;
-}
-
-button:disabled {
-    background:#475569;
-    cursor:not-allowed;
-}
-
-button:hover:not(:disabled) {
-    background:#2563eb;
-}
-
-#downloadBtn {
-    background:#10b981;
-    display:none;
-}
-
-#downloadBtn:hover {
-    background:#059669;
-}
-
-.speed-control {
-    margin-top:15px;
-    font-size:14px;
-    color:#94a3b8;
-}
-
-audio {
-    margin-top:20px;
-    width:100%;
-}
-
-.footer {
-    text-align:center;
-    padding:30px;
-    font-size:14px;
-    color:#64748b;
-}
-</style>
+    <meta charset="UTF-8">
+    <title>EchoSonic — AI Text to Voice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="icon" type="image/png" href="img/echosonic.png?v=2026">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a; --card-bg: #1e293b; --accent: #3b82f6;
+            --accent-gradient: linear-gradient(135deg, #60a5fa, #a78bfa);
+            --success: #10b981; --error: #ef4444; --text-main: #f1f5f9;
+            --text-dim: #94a3b8; --border: #334155;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        .hero { text-align: center; padding: 50px 20px; background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%); }
+        .brand-logo { width: 200px; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(96, 165, 250, 0.4)); }
+        .hero h1 { font-size: 48px; font-weight: 800; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; }
+        .container { max-width: 760px; width: 95%; margin: auto; background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid var(--border); padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .admin-active-label { background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; display: none; text-align: center; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3); text-transform: uppercase; }
+        textarea { width: 100%; height: 180px; padding: 20px; border-radius: 16px; border: 2px solid var(--border); background: #0f172a; color: white; font-size: 16px; outline: none; transition: 0.3s; resize: none; }
+        textarea:focus { border-color: var(--accent); }
+        .meta-info { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-dim); }
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
+        select { padding: 12px; border-radius: 10px; background: var(--card-bg); border: 1px solid var(--border); color: white; }
+        .actions { display: flex; gap: 12px; margin-top: 25px; }
+        button { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        #generateBtn { background: var(--accent); color: white; }
+        #downloadBtn { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); display: none; }
+        .voice-wave { display: none; justify-content: center; gap: 4px; height: 20px; margin-top: 15px; }
+        .bar { width: 3px; height: 100%; background: var(--accent); animation: wave 1s infinite; }
+        @keyframes wave { 0%, 100% { height: 5px; } 50% { height: 20px; } }
+        .status-box { margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-dim); }
+        audio { margin-top: 15px; width: 100%; filter: invert(100%) hue-rotate(180deg); }
+        .footer { text-align: center; padding: 40px; font-size: 12px; color: #475569; }
+        .admin-trigger { cursor: pointer; color: #334155; text-decoration: none; font-weight: 600; }
+        .logout-btn { color: var(--error) !important; margin-left: 10px; font-weight: 800; }
+        .quota-badge { color: var(--accent); font-weight: 600; }
+    </style>
 </head>
-
 <body>
-
 <section class="hero">
-    <h1>🎙 EchoSonic AI Voice</h1>
-    <p>Convert text into natural AI speech instantly. Powered by Google Cloud.</p>
+    <img src="img/echosonic.png" alt="EchoSonic Logo" class="brand-logo">
+    <h1>EchoSonic AI</h1>
 </section>
-
 <section class="generator-section">
 <div class="container">
-
-<textarea id="textInput" maxlength="250" placeholder="Type something amazing... (Max 250 characters)"></textarea>
-
-<div class="char-counter">
-    <span id="charCount">0</span> / 250
-</div>
-
-<div class="limit-warning" id="limitWarning">
-    Character limit exceeded (250 max)
-</div>
-
-<select id="voiceSelect">
-    <option value="en_US-amy-low.onnx">Amy (Female)</option>
-    <option value="en_US-ryan-low.onnx">Ryan (Male)</option>
-</select>
-
-<br>
-
-<button id="generateBtn" onclick="speak()">Generate Voice</button>
-<button id="downloadBtn" onclick="downloadAudio()">Download</button>
-
-<div class="speed-control">
-Playback Speed:
-<select id="speedSelect">
-    <option value="0.75">0.75x</option>
-    <option value="1" selected>1x (Normal)</option>
-    <option value="1.25">1.25x</option>
-    <option value="1.5">1.5x</option>
-</select>
-</div>
-
-<div id="status" style="margin-top:15px;color:#94a3b8;"></div>
-
-<audio id="audioPlayer" controls></audio>
-
+    <div id="adminLabel" class="admin-active-label">⚡ PRO MODE: QUOTA WILL RESET ON GENERATE</div>
+    <textarea id="textInput" placeholder="Enter text here..."></textarea>
+    <div class="meta-info">
+        <div id="quotaInfo">Quota: <span id="quotaCount" class="quota-badge">...</span></div>
+        <div id="counterBox"><span id="charCount">0</span> / 500</div>
+    </div>
+    <div class="controls-grid">
+        <div class="control-group"><label>Voice</label>
+            <select id="voiceSelect">
+                <option value="en_US-amy-low.onnx">Amy (Female)</option>
+                <option value="en_US-ryan-low.onnx">Ryan (Male)</option>
+            </select>
+        </div>
+        <div class="control-group"><label>Speed</label>
+            <select id="speedSelect">
+                <option value="0.75">0.75x</option><option value="1" selected>1.0x</option><option value="1.5">1.5x</option>
+            </select>
+        </div>
+    </div>
+    <div class="actions">
+        <button id="generateBtn" onclick="speak()">Generate</button>
+        <button id="downloadBtn" onclick="downloadAudio()">Download .WAV</button>
+    </div>
+    <div class="voice-wave" id="waveAnim"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+    <div id="status" class="status-box">Ready</div>
+    <audio id="audioPlayer" controls></audio>
 </div>
 </section>
-
-<div class="footer">
-© 2026 EchoSonic • Built by Roopesh
-</div>
+<footer class="footer">
+    <p>© 2026 EchoSonic AI • Built by Roopesh</p>
+    <p style="margin-top:12px;">
+        <span id="adminToggle" class="admin-trigger" onclick="handleAdmin()">Admin Portal</span>
+        <span id="logoutContainer"></span>
+    </p>
+</footer>
 
 <script>
-const textInput = document.getElementById("textInput");
-const charCount = document.getElementById("charCount");
-const limitWarning = document.getElementById("limitWarning");
-const generateBtn = document.getElementById("generateBtn");
-const statusDiv = document.getElementById("status");
-const audioPlayer = document.getElementById("audioPlayer");
-const downloadBtn = document.getElementById("downloadBtn");
-const speedSelect = document.getElementById("speedSelect");
+    const textInput = document.getElementById("textInput");
+    const statusDiv = document.getElementById("status");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const adminLabel = document.getElementById("adminLabel");
+    const waveAnim = document.getElementById("waveAnim");
+    const adminToggle = document.getElementById("adminToggle");
+    const logoutContainer = document.getElementById("logoutContainer");
+    const quotaCount = document.getElementById("quotaCount");
 
-let currentAudioBlob = null;
-const DAILY_LIMIT = 4;
-const ADMIN_SECRET = "roopesh123"; 
+    const BACKEND_URL = window.location.hostname.includes("github.dev") ? 
+                        `https://${window.location.hostname.replace(/-\d+\.app/, "-8080.app")}` : 
+                        "https://echosonic-backend-864726775563.us-central1.run.app";
 
-// Update this to your specific GCP URL
-const BACKEND_URL = "https://echosonic-backend-864726775563.us-central1.run.app";
+    let adminToken = localStorage.getItem("echo_admin_token");
+    let LIMIT = 500;
 
-// Detect admin mode
-const params = new URLSearchParams(window.location.search);
-const isAdmin = params.get("admin") === ADMIN_SECRET;
-
-if (isAdmin) {
-    statusDiv.innerText = "Admin Mode Enabled — Unlimited Access";
-    statusDiv.style.color = "#10b981";
-    textInput.removeAttribute("maxlength");
-}
-
-// Character counter
-textInput.addEventListener("input", () => {
-    const length = textInput.value.length;
-    charCount.innerText = length;
-
-    if (!isAdmin && length > 250) {
-        limitWarning.style.display = "block";
-        generateBtn.disabled = true;
+    // Initialization logic
+    if (adminToken) {
+        adminLabel.style.display = "block";
+        textInput.removeAttribute("maxlength");
+        document.getElementById("counterBox").style.display = "none";
+        quotaCount.innerText = "Unlimited";
+        adminToggle.innerText = "Admin Portal [Logged In]";
+        logoutContainer.innerHTML = '<a href="#" class="admin-trigger logout-btn" onclick="logout()">LOGOUT</a>';
     } else {
-        limitWarning.style.display = "none";
-        generateBtn.disabled = false;
-    }
-});
-
-// Playback speed
-speedSelect.addEventListener("change", () => {
-    audioPlayer.playbackRate = parseFloat(speedSelect.value);
-});
-
-// Daily limit
-function checkDailyLimit() {
-    if (isAdmin) return true;
-
-    const today = new Date().toDateString();
-    const usage = JSON.parse(localStorage.getItem("echoUsage")) || {};
-
-    if (!usage.date || usage.date !== today) {
-        usage.date = today;
-        usage.count = 0;
+        textInput.setAttribute("maxlength", LIMIT);
+        updateQuotaDisplay();
     }
 
-    if (usage.count >= DAILY_LIMIT) {
-        return false;
+    async function updateQuotaDisplay() {
+        if (adminToken) return;
+        try {
+            // We'll hit a small helper or just rely on the synthesis response to update this
+            // For now, let's keep it simple: it updates after every attempt
+        } catch(e) {}
     }
 
-    usage.count++;
-    localStorage.setItem("echoUsage", JSON.stringify(usage));
-    return true;
-}
+    textInput.addEventListener("input", () => {
+        if (!adminToken) document.getElementById("charCount").innerText = textInput.value.length;
+    });
 
-async function speak() {
-    const text = textInput.value.trim();
-    const voice = document.getElementById("voiceSelect").value;
+    async function speak() {
+        const text = textInput.value.trim();
+        if (!text) return;
+        statusDiv.innerText = "Generating...";
+        waveAnim.style.display = "flex";
+        
+        let url = `${BACKEND_URL}/synthesize?text=${encodeURIComponent(text)}&voice=${document.getElementById("voiceSelect").value}`;
+        if (adminToken) url += `&token=${adminToken}`;
 
-    if (!text) {
-        alert("Please enter some text.");
-        return;
+        try {
+            const response = await fetch(url);
+            
+            // Handle Quota Header if you decide to add it, otherwise handle 429
+            if (response.status === 429) {
+                statusDiv.innerHTML = "<span style='color:var(--error)'>Limit reached! Login as Admin & Click Generate to Reset.</span>";
+                if(!adminToken) quotaCount.innerText = "0 left";
+                return;
+            }
+            
+            if (!response.ok) throw new Error("Error");
+
+            const blob = await response.blob();
+            audioPlayer.src = URL.createObjectURL(blob);
+            audioPlayer.playbackRate = parseFloat(document.getElementById("speedSelect").value);
+            audioPlayer.play();
+            statusDiv.innerText = "Complete!";
+            document.getElementById("downloadBtn").style.display = "block";
+            window.lastBlob = blob;
+
+            // Simple client-side quota simulation (optional, server-side is more accurate)
+            if(!adminToken) {
+                // You could fetch actual remaining count here if backend provides it
+            }
+
+        } catch (e) {
+            statusDiv.innerText = "Connection error.";
+        } finally {
+            waveAnim.style.display = "none";
+        }
     }
 
-    if (!isAdmin && text.length > 250) {
-        statusDiv.innerText = "Character limit exceeded.";
-        return;
+    function downloadAudio() {
+        if(!window.lastBlob) return;
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(window.lastBlob);
+        link.download = `echosonic_${Date.now()}.wav`;
+        link.click();
     }
 
-    if (!checkDailyLimit()) {
-        statusDiv.innerText = "Daily limit reached (4 generations per day).";
-        return;
+    async function handleAdmin() {
+        if (adminToken) return;
+        const code = prompt("Enter MFA Code:");
+        if (!code) return;
+        const res = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`).then(r => r.json());
+        if (res.success) { 
+            localStorage.setItem("echo_admin_token", res.token); 
+            location.reload(); 
+        } else {
+            alert("Invalid code.");
+        }
     }
 
-    statusDiv.innerText = "Generating voice... (First time might take 10s to wake up)";
-    downloadBtn.style.display = "none";
-    generateBtn.disabled = true;
-
-    try {
-        const response = await fetch(
-            `${BACKEND_URL}/synthesize?text=`
-            + encodeURIComponent(text)
-            + "&voice=" + encodeURIComponent(voice)
-        );
-
-        if (!response.ok) throw new Error("Server error");
-
-        const blob = await response.blob();
-        currentAudioBlob = blob;
-
-        const url = URL.createObjectURL(blob);
-        audioPlayer.src = url;
-        audioPlayer.playbackRate = parseFloat(speedSelect.value);
-        audioPlayer.play();
-
-        downloadBtn.style.display = "inline-block";
-        statusDiv.innerText = "Voice generated successfully!";
-    } catch (error) {
-        console.error(error);
-        statusDiv.innerText = "Error generating voice. Make sure the backend is active.";
+    function logout() {
+        localStorage.removeItem("echo_admin_token");
+        location.reload();
     }
-
-    generateBtn.disabled = false;
-}
-
-function downloadAudio() {
-    if (!currentAudioBlob) return;
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const fileName = "EchoSonic_" + timestamp + ".wav";
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(currentAudioBlob);
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
 </script>
-
 </body>
 </html>
