@@ -1,194 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>EchoSonic — AI Text to Voice</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>EchoSonic — AI Text to Voice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="icon" type="image/png" href="../img/echosonic.png">
+    <link rel="apple-touch-icon" href="../img/echosonic.png">
 
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Inter', sans-serif; background:#0f172a; color:#f1f5f9; display: flex; flex-direction: column; min-height: 100vh; }
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #3b82f6;
+            --accent-gradient: linear-gradient(135deg, #60a5fa, #a78bfa);
+            --success: #10b981;
+            --error: #ef4444;
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+            --border: #334155;
+        }
 
-/* Main Content */
-.hero { text-align:center; padding:80px 20px 40px; background:linear-gradient(135deg,#0f172a,#1e293b); }
-.hero h1 { font-size:42px; font-weight:800; margin-bottom:15px; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.hero p { font-size:17px; color:#94a3b8; max-width:600px; margin:auto; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh;
+            line-height: 1.5;
+        }
 
-.generator-section { background:#111827; padding:40px 20px; flex-grow: 1; }
-.container { max-width:700px; margin:auto; }
+        /* Hero Section */
+        .hero { 
+            text-align: center; 
+            padding: 50px 20px; 
+            background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+        }
+        .brand-logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 15px rgba(96, 165, 250, 0.4));
+        }
+        .hero h1 { 
+            font-size: clamp(32px, 5vw, 48px); 
+            font-weight: 800; 
+            margin-bottom: 12px; 
+            background: var(--accent-gradient); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            letter-spacing: -1px;
+        }
+        .hero p { font-size: 18px; color: var(--text-dim); max-width: 600px; margin: auto; }
 
-textarea { width:100%; height:140px; padding:20px; border-radius:12px; border:2px solid #334155; background:#1e293b; font-size:16px; margin-top:20px; resize:none; color: #f1f5f9; outline: none; transition: border-color 0.3s; }
-textarea:focus { border-color: #3b82f6; }
+        /* Generator Section */
+        .generator-section { padding: 20px; flex-grow: 1; display: flex; align-items: flex-start; }
+        .container { 
+            max-width: 760px; 
+            width: 100%;
+            margin: auto; 
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
 
-.controls-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 15px; }
-.char-counter { font-size:13px; color:#94a3b8; margin-left: auto; }
+        .admin-active-label { 
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: none;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-select, button { padding:12px 20px; border-radius:8px; border:none; font-size:15px; font-weight: 600; }
-button { background:#3b82f6; color:white; cursor:pointer; transition: 0.2s; }
-button:hover:not(:disabled) { background:#2563eb; transform: translateY(-1px); }
-button:disabled { background:#475569; opacity: 0.6; }
+        /* Text Area */
+        .input-wrapper { position: relative; }
+        textarea { 
+            width: 100%; 
+            height: 180px; 
+            padding: 20px; 
+            border-radius: 16px; 
+            border: 2px solid var(--border); 
+            background: #0f172a; 
+            font-size: 16px; 
+            color: var(--text-main); 
+            outline: none; 
+            transition: all 0.3s;
+            font-family: inherit;
+            resize: vertical;
+        }
+        textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        
+        .char-counter { font-size: 12px; text-align: right; margin-top: 8px; color: var(--text-dim); }
+        .char-counter.limit-near { color: var(--error); font-weight: bold; }
 
-#downloadBtn { background:#10b981; display:none; }
-#downloadBtn:hover { background:#059669; }
+        /* Controls */
+        .controls-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 15px; 
+            margin-top: 20px; 
+        }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
 
-.status-box { margin-top:20px; padding: 15px; border-radius: 8px; background: #1e293b; color: #94a3b8; font-size: 14px; min-height: 50px; border: 1px solid #334155; }
-audio { margin-top:20px; width:100%; height: 40px; }
+        select { 
+            padding: 12px; 
+            border-radius: 10px; 
+            background: var(--card-bg); 
+            border: 1px solid var(--border); 
+            color: white; 
+            font-size: 14px; 
+            cursor: pointer;
+            outline: none;
+        }
 
-/* Footer & Hidden Admin */
-.footer { text-align:center; padding:40px; font-size:13px; color:#64748b; border-top: 1px solid #1e293b; }
-.admin-trigger { cursor: pointer; color: #334155; text-decoration: underline; transition: color 0.3s; }
-.admin-trigger:hover { color: #64748b; }
-.admin-active-label { color: #10b981; font-weight: bold; margin-bottom: 10px; display: none; }
-</style>
+        /* Buttons */
+        .actions { display: flex; gap: 12px; margin-top: 25px; }
+        button { 
+            flex: 1;
+            padding: 14px 24px; 
+            border-radius: 12px; 
+            border: none; 
+            font-size: 15px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        #generateBtn { background: var(--accent); color: white; }
+        #generateBtn:hover:not(:disabled) { background: #2563eb; transform: translateY(-1px); }
+        
+        #downloadBtn { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); display: none; }
+        #downloadBtn:hover { background: var(--success); color: white; }
+
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Synthesis Animation */
+        .voice-wave {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            height: 20px;
+            margin-top: 15px;
+        }
+        .bar { width: 3px; height: 100%; background: var(--accent); border-radius: 10px; animation: wave 1s ease-in-out infinite; }
+        .bar:nth-child(2) { animation-delay: 0.1s; }
+        .bar:nth-child(3) { animation-delay: 0.2s; }
+        .bar:nth-child(4) { animation-delay: 0.3s; }
+        @keyframes wave { 0%, 100% { height: 5px; } 50% { height: 20px; } }
+
+        /* Status & Audio */
+        .status-box { margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-dim); }
+        audio { 
+            margin-top: 15px; width: 100%; height: 40px; 
+            filter: invert(100%) hue-rotate(180deg) brightness(1.5);
+        }
+
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .footer { text-align: center; padding: 40px; font-size: 12px; color: #475569; }
+        .admin-trigger { cursor: pointer; color: #334155; text-decoration: none; font-weight: 500; transition: 0.2s; }
+        .admin-trigger:hover { color: var(--accent); }
+    </style>
 </head>
 
 <body>
 <section class="hero">
-    <h1>🎙 EchoSonic AI</h1>
-    <p>Professional Text-to-Speech for everyone. High fidelity, low latency.</p>
+    <img src="../img/echosonic.png" alt="EchoSonic Logo" class="brand-logo">
+    <h1>EchoSonic AI</h1>
+    <p>Premium Text-to-Speech Engine</p>
 </section>
 
 <section class="generator-section">
 <div class="container">
-    <div id="adminLabel" class="admin-active-label">⚡ ADMIN MODE ACTIVE: UNLIMITED ACCESS</div>
+    <div id="adminLabel" class="admin-active-label">⚡ PRO MODE: UNLIMITED LENGTH</div>
     
-    <textarea id="textInput" maxlength="250" placeholder="Paste your text here..."></textarea>
+    <div class="input-wrapper">
+        <textarea id="textInput" placeholder="Paste your text here (Ctrl+Enter to generate)..."></textarea>
+        <div class="char-counter" id="counterBox"><span id="charCount">0</span> / 500</div>
+    </div>
     
-    <div class="controls-row">
-        <select id="voiceSelect">
-            <option value="en_US-amy-low.onnx">Amy (Female)</option>
-            <option value="en_US-ryan-low.onnx">Ryan (Male)</option>
-        </select>
+    <div class="controls-grid">
+        <div class="control-group">
+            <label>Voice Artist</label>
+            <select id="voiceSelect">
+                <option value="en_US-amy-low.onnx">Amy (Female)</option>
+                <option value="en_US-ryan-low.onnx">Ryan (Male)</option>
+            </select>
+        </div>
         
-        <select id="speedSelect">
-            <option value="0.75">0.75x</option>
-            <option value="1" selected>1.0x</option>
-            <option value="1.25">1.25x</option>
-            <option value="1.5">1.5x</option>
-        </select>
-
-        <div class="char-counter"><span id="charCount">0</span> / 250</div>
+        <div class="control-group">
+            <label>Speed</label>
+            <select id="speedSelect">
+                <option value="0.75">0.75x</option>
+                <option value="1" selected>1.0x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+            </select>
+        </div>
     </div>
 
-    <button id="generateBtn" onclick="speak()">Generate Speech</button>
-    <button id="downloadBtn" onclick="downloadAudio()">Download .WAV</button>
+    <div class="actions">
+        <button id="generateBtn" onclick="speak()">
+            <div id="btnSpinner" class="spinner"></div>
+            <span id="btnText">Generate Voice</span>
+        </button>
+        <button id="downloadBtn" onclick="downloadAudio()">Download .WAV</button>
+    </div>
 
-    <div id="status" class="status-box">Ready to synthesize...</div>
+    <div class="voice-wave" id="waveAnim">
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    </div>
+
+    <div id="status" class="status-box">Ready to synthesize</div>
     <audio id="audioPlayer" controls></audio>
 </div>
 </section>
 
 <footer class="footer">
-    <p>© 2026 EchoSonic AI • Built by Roopesh</p>
-    <p style="margin-top:10px;">
-        <span id="adminToggle" class="admin-trigger" onclick="handleAdmin()">Admin Mode</span>
+    <p>© 2026 EchoSonic AI • Roopesh Architecture</p>
+    <p style="margin-top:12px;">
+        <span id="adminToggle" class="admin-trigger" onclick="handleAdmin()">Admin Portal</span>
     </p>
 </footer>
 
 <script>
-const textInput = document.getElementById("textInput");
-const charCount = document.getElementById("charCount");
-const statusDiv = document.getElementById("status");
-const audioPlayer = document.getElementById("audioPlayer");
-const adminToggle = document.getElementById("adminToggle");
-const adminLabel = document.getElementById("adminLabel");
+    const textInput = document.getElementById("textInput");
+    const charCount = document.getElementById("charCount");
+    const counterBox = document.getElementById("counterBox");
+    const statusDiv = document.getElementById("status");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const adminToggle = document.getElementById("adminToggle");
+    const adminLabel = document.getElementById("adminLabel");
+    const btnSpinner = document.getElementById("btnSpinner");
+    const btnText = document.getElementById("btnText");
+    const generateBtn = document.getElementById("generateBtn");
+    const waveAnim = document.getElementById("waveAnim");
 
-const BACKEND_URL = "https://echosonic-backend-864726775563.us-central1.run.app";
-let adminToken = localStorage.getItem("echo_admin_token");
+    // Dynamic Backend Check - Optimized for Codespaces
+    const PRODUCTION_URL = "https://echosonic-backend-864726775563.us-central1.run.app";
+    const BACKEND_URL = window.location.hostname.includes("github.dev") ? 
+                        `https://${window.location.hostname.replace(/-\d+\.app/, "-8080.app")}` : PRODUCTION_URL;
 
-// Check login status on load
-if (adminToken) {
-    enableAdminUI();
-}
+    let adminToken = localStorage.getItem("echo_admin_token");
+    let LIMIT = 500;
 
-function enableAdminUI() {
-    adminLabel.style.display = "block";
-    adminToggle.innerText = "Logout Admin";
-    textInput.removeAttribute("maxlength");
-    charCount.innerText = "Admin: Unlimited";
-    textInput.placeholder = "Enter unlimited text (Admin)...";
-}
+    // Load saved settings
+    document.getElementById("voiceSelect").value = localStorage.getItem("echo_voice") || "en_US-amy-low.onnx";
+    document.getElementById("speedSelect").value = localStorage.getItem("echo_speed") || "1";
 
-async function handleAdmin() {
     if (adminToken) {
-        if(confirm("Logout of Admin Mode?")) {
-            localStorage.removeItem("echo_admin_token");
-            location.reload();
+        enableAdminUI();
+    } else {
+        textInput.setAttribute("maxlength", LIMIT);
+    }
+
+    function enableAdminUI() {
+        LIMIT = 10000;
+        adminLabel.style.display = "block";
+        adminToggle.innerText = "Exit Admin Mode";
+        adminToggle.style.color = "#ef4444";
+        textInput.removeAttribute("maxlength");
+        counterBox.innerText = "Unlimited Pro Access";
+    }
+
+    textInput.addEventListener("input", () => {
+        if (!adminToken) {
+            const len = textInput.value.length;
+            charCount.innerText = len;
+            if (len >= LIMIT - 20) counterBox.classList.add("limit-near");
+            else counterBox.classList.remove("limit-near");
         }
-        return;
-    }
+    });
 
-    const code = prompt("Enter 6-digit MFA Code:");
-    if (!code) return;
+    textInput.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") speak();
+    });
 
-    try {
-        statusDiv.innerText = "Verifying MFA...";
-        const response = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            localStorage.setItem("echo_admin_token", data.token);
-            alert("MFA Verified. Welcome, Roopesh.");
-            location.reload();
-        } else {
-            statusDiv.innerText = "Invalid MFA Code.";
-            alert("Verification Failed.");
+    async function speak() {
+        const text = textInput.value.trim();
+        const voice = document.getElementById("voiceSelect").value;
+        const speed = document.getElementById("speedSelect").value;
+
+        if (!text) return;
+
+        localStorage.setItem("echo_voice", voice);
+        localStorage.setItem("echo_speed", speed);
+
+        statusDiv.innerText = "Synthesizing audio...";
+        btnSpinner.style.display = "block";
+        waveAnim.style.display = "flex";
+        btnText.innerText = "Processing...";
+        generateBtn.disabled = true;
+
+        let url = `${BACKEND_URL}/synthesize?text=${encodeURIComponent(text)}&voice=${voice}`;
+        if (adminToken) url += `&token=${adminToken}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Synthesis Failed");
+
+            const blob = await response.blob();
+            const audioUrl = URL.createObjectURL(blob);
+            
+            audioPlayer.src = audioUrl;
+            audioPlayer.playbackRate = parseFloat(speed);
+            audioPlayer.play();
+            
+            statusDiv.innerText = "Generation complete!";
+            document.getElementById("downloadBtn").style.display = "flex";
+            window.lastBlob = blob;
+        } catch (e) {
+            statusDiv.innerText = "Error: Check connection or auth.";
+            console.error(e);
+        } finally {
+            btnSpinner.style.display = "none";
+            waveAnim.style.display = "none";
+            btnText.innerText = "Generate Voice";
+            generateBtn.disabled = false;
         }
-    } catch (e) {
-        statusDiv.innerText = "Error connecting to auth server.";
     }
-}
 
-textInput.addEventListener("input", () => {
-    if (!adminToken) {
-        charCount.innerText = `${textInput.value.length} / 250`;
+    function downloadAudio() {
+        if (!window.lastBlob) return;
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(window.lastBlob);
+        link.download = `EchoSonic_${Date.now()}.wav`;
+        link.click();
     }
-});
 
-async function speak() {
-    const text = textInput.value.trim();
-    const voice = document.getElementById("voiceSelect").value;
-    const speed = document.getElementById("speedSelect").value;
-
-    if (!text) return;
-
-    statusDiv.innerText = "Synthesizing... please wait.";
-    document.getElementById("generateBtn").disabled = true;
-
-    let url = `${BACKEND_URL}/synthesize?text=${encodeURIComponent(text)}&voice=${voice}`;
-    if (adminToken) url += `&token=${adminToken}`;
-
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error();
-
-        const blob = await response.blob();
-        const audioUrl = URL.createObjectURL(blob);
-        
-        audioPlayer.src = audioUrl;
-        audioPlayer.playbackRate = parseFloat(speed);
-        audioPlayer.play();
-        
-        statusDiv.innerText = "Generation complete.";
-        document.getElementById("downloadBtn").style.display = "inline-block";
-        
-        // Save for download
-        window.lastBlob = blob;
-    } catch (e) {
-        statusDiv.innerText = "Error: Text too long or Auth expired.";
-    } finally {
-        document.getElementById("generateBtn").disabled = false;
+    async function handleAdmin() {
+        if (adminToken) {
+            if(confirm("Logout from Admin?")) {
+                localStorage.removeItem("echo_admin_token");
+                location.reload();
+            }
+            return;
+        }
+        const code = prompt("Enter MFA Code:");
+        if (!code) return;
+        try {
+            const res = await fetch(`${BACKEND_URL}/verify-otp?code=${code}`);
+            const data = await res.json();
+            if (data.success) {
+                localStorage.setItem("echo_admin_token", data.token);
+                location.reload();
+            } else { alert("Wrong code."); }
+        } catch (e) { alert("Server error."); }
     }
-}
-
-function downloadAudio() {
-    if (!window.lastBlob) return;
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(window.lastBlob);
-    link.download = `EchoSonic_${Date.now()}.wav`;
-    link.click();
-}
 </script>
 </body>
 </html>
