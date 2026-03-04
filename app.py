@@ -20,10 +20,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configuration
 ENGINE_DIR = "engine-python"
-OTP_SECRET = os.getenv("ADMIN_OTP_SECRET", "KRXW4Z3DPNUXIIDB") 
-JWT_SECRET = os.getenv("JWT_SECRET", "echosonic-secure-jwt-2026")
+
+# --- SECURITY UPDATE: NO HARDCODED SECRETS ---
+# We removed the second argument (the default string). 
+# The app now requires these to be set as Environment Variables on the server.
+OTP_SECRET = os.getenv("ADMIN_OTP_SECRET") 
+JWT_SECRET = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
+
+# This block ensures the app doesn't start if it's not secure
+if not OTP_SECRET or not JWT_SECRET:
+    raise RuntimeError(
+        "CRITICAL SECURITY ERROR: ADMIN_OTP_SECRET or JWT_SECRET is not set! "
+        "Please set these environment variables in your hosting provider settings."
+    )
 
 AVAILABLE_VOICES = {
     "en_US-amy-low.onnx": os.path.join(ENGINE_DIR, "en_US-amy-low.onnx"),
@@ -47,12 +59,13 @@ def get_client_ip(request: Request):
 
 @app.get("/verify-otp")
 def verify_otp(code: str):
+    # Security: Verify-otp will now use the secret from the environment
     totp = pyotp.TOTP(OTP_SECRET)
     if totp.verify(code):
         expires = datetime.utcnow() + timedelta(hours=4)
         encoded_jwt = jwt.encode({"exp": expires, "sub": "admin"}, JWT_SECRET, algorithm=ALGORITHM)
         return {"success": True, "token": encoded_jwt}
-    raise HTTPException(status_code=401, detail="Invalid OTP")
+    raise HTTPException(status_code=401, detail="Invalid MFA Code")
 
 @app.get("/synthesize")
 def synthesize(request: Request, text: str = Query(...), voice: str = Query("en_US-amy-low.onnx"), token: str = Query(None)):
@@ -66,16 +79,20 @@ def synthesize(request: Request, text: str = Query(...), voice: str = Query("en_
             payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
             if payload.get("sub") == "admin":
                 is_admin = True
-                USER_QUOTAS[client_ip] = {"count": 0, "date": today} # Reset IP counter
-        except JWTError: pass
+                # Reset the specific IP's counter upon successful admin synthesis
+                USER_QUOTAS[client_ip] = {"count": 0, "date": today}
+        except JWTError:
+            pass # Treat as normal user if token is fake/expired
 
     max_len = 5000 if is_admin else 500
-    if len(text) > max_len: raise HTTPException(status_code=400, detail="Text too long")
+    if len(text) > max_len: 
+        raise HTTPException(status_code=400, detail=f"Text too long. Max {max_len} characters.")
 
     if not is_admin:
         if client_ip not in USER_QUOTAS or USER_QUOTAS[client_ip]["date"] != today:
             USER_QUOTAS[client_ip] = {"count": 0, "date": today}
-        if USER_QUOTAS[client_ip]["count"] >= 5: raise HTTPException(status_code=429)
+        if USER_QUOTAS[client_ip]["count"] >= 5: 
+            raise HTTPException(status_code=429, detail="Daily limit reached. Access Admin to reset.")
 
     if voice not in VOICE_MODELS: voice = "en_US-amy-low.onnx"
     cache_key = hashlib.md5((voice + text).encode()).hexdigest()
