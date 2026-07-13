@@ -1,63 +1,84 @@
 import os
 import requests
 import time
+import json
 from fastapi import APIRouter, Request, BackgroundTasks
 
 router = APIRouter()
 
-# Variables are pulled from your Cloud Run Environment Settings
+# Environment Variables
 GITLAB_PROJECT_ID = os.getenv("GITLAB_PROJECT_ID")
 GITLAB_TRIGGER_TOKEN = os.getenv("GITLAB_TRIGGER_TOKEN")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+HOLIDAY_FILE = 'tests/v2soft_attendance/holidays.json'
 
-# Global variable to track the last trigger time (cooldown in seconds)
-last_trigger_time = 0
-COOLDOWN_SECONDS = 60
+def send_telegram_message(text):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text}
+    requests.post(url, json=payload)
 
 def trigger_gitlab_pipeline():
-    """Function to call the GitLab API using query parameters."""
     url = f"https://gitlab.com/api/v4/projects/{GITLAB_PROJECT_ID}/trigger/pipeline"
-    
-    # GitLab Trigger API accepts tokens and refs as query parameters
-    params = {
-        "token": GITLAB_TRIGGER_TOKEN,
-        "ref": "main"  # Ensure 'main' is your project's default branch
-    }
-    
+    params = {"token": GITLAB_TRIGGER_TOKEN, "ref": "main"}
     try:
         response = requests.post(url, params=params, timeout=10)
-        
-        # Log status and the detailed response text from GitLab
         print(f"GitLab API Status: {response.status_code}")
-        print(f"GitLab API Response Text: {response.text}")
-        
     except Exception as exc:
         print(f"Pipeline trigger failed: {exc}")
 
 @router.post("/webhook/gitlab")
 async def telegram_webhook(request: Request, background_tasks: BackgroundTasks):
-    global last_trigger_time
     try:
         update = await request.json()
+        message = update.get("message", {})
+        text = message.get("text", "").strip()
+        chat_id = str(message.get("chat", {}).get("id", ""))
+        
+        if chat_id != TELEGRAM_CHAT_ID:
+            return {"status": "OK"} # Ignore unauthorized chats
     except Exception:
-        return {"status": "error", "message": "Invalid JSON"}
+        return {"status": "error"}
 
-    current_time = time.time()
-
-    # Check for the specific command in the Telegram message
-    message = update.get("message", {})
-    text = message.get("text", "")
-
+    # Handle /run_pipeline
     if text == "/run_pipeline":
-        # Cooldown logic: only trigger if more than 60 seconds have passed
-        if current_time - last_trigger_time > COOLDOWN_SECONDS:
-            last_trigger_time = current_time
-            # Offload the blocking request to a background task
-            background_tasks.add_task(trigger_gitlab_pipeline)
-            print("Pipeline trigger initiated.")
-        else:
-            print("Command ignored: Cooldown active (wait 60s).")
-    else:
-        print(f"Command ignored: Received '{text}'")
+        background_tasks.add_task(trigger_gitlab_pipeline)
+        send_telegram_message("Pipeline trigger initiated! 🚀")
 
-    # Return immediately to acknowledge the webhook to Telegram
+    # Handle /listholidays
+    elif text == "/listholidays":
+        with open(HOLIDAY_FILE, 'r') as f:
+            data = json.load(f)
+            hols = data.get("holidays", [])
+            msg = "📅 Current Holiday Manifest:\n• " + "\n• ".join(hols) if hols else "Manifest is empty."
+            send_telegram_message(msg)
+
+    # Handle /addholiday YYYY-MM-DD
+    elif text.startswith("/addholiday "):
+        new_date = text.replace("/addholiday ", "").strip()
+        with open(HOLIDAY_FILE, 'r+') as f:
+            data = json.load(f)
+            if new_date not in data["holidays"]:
+                data["holidays"].append(new_date)
+                data["holidays"].sort()
+                f.seek(0)
+                json.dump(data, f, indent=2)
+                send_telegram_message(f"✅ Added: {new_date}")
+            else:
+                send_telegram_message("Already exists.")
+
+    # Handle /delholiday YYYY-MM-DD
+    elif text.startswith("/delholiday "):
+        del_date = text.replace("/delholiday ", "").strip()
+        with open(HOLIDAY_FILE, 'r+') as f:
+            data = json.load(f)
+            if del_date in data["holidays"]:
+                data["holidays"].remove(del_date)
+                f.seek(0)
+                f.truncate()
+                json.dump(data, f, indent=2)
+                send_telegram_message(f"🗑️ Removed: {del_date}")
+            else:
+                send_telegram_message("Date not found.")
+
     return {"status": "OK"}
