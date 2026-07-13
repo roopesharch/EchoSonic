@@ -11,6 +11,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError, jwt
 from piper.voice import PiperVoice
 
+
+#  remove this below 3 lines to rmeovethe integration of telegram message check funstion for v2soft
+from telegram_webhook import router as telegram_router
+app.include_router(telegram_router)
+# remove till here  and also delete the telegram_webhook.py file in the root folder
+
+
 app = FastAPI()
 
 app.add_middleware(
