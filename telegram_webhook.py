@@ -1,6 +1,5 @@
 import os
 import requests
-import time
 import json
 from fastapi import APIRouter, Request, BackgroundTasks
 
@@ -11,6 +10,7 @@ GITLAB_PROJECT_ID = os.getenv("GITLAB_PROJECT_ID")
 GITLAB_TRIGGER_TOKEN = os.getenv("GITLAB_TRIGGER_TOKEN")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+# Note: Ensure this path is correct relative to where your container runs
 HOLIDAY_FILE = 'tests/v2soft_attendance/holidays.json'
 
 def send_telegram_message(text):
@@ -22,8 +22,7 @@ def trigger_gitlab_pipeline():
     url = f"https://gitlab.com/api/v4/projects/{GITLAB_PROJECT_ID}/trigger/pipeline"
     params = {"token": GITLAB_TRIGGER_TOKEN, "ref": "main"}
     try:
-        response = requests.post(url, params=params, timeout=10)
-        print(f"GitLab API Status: {response.status_code}")
+        requests.post(url, params=params, timeout=10)
     except Exception as exc:
         print(f"Pipeline trigger failed: {exc}")
 
@@ -36,16 +35,16 @@ async def telegram_webhook(request: Request, background_tasks: BackgroundTasks):
         chat_id = str(message.get("chat", {}).get("id", ""))
         
         if chat_id != TELEGRAM_CHAT_ID:
-            return {"status": "OK"} # Ignore unauthorized chats
-    except Exception:
+            return {"status": "OK"}
+    except:
         return {"status": "error"}
 
-    # Handle /run_pipeline
+    # 1. Pipeline Trigger
     if text == "/run_pipeline":
         background_tasks.add_task(trigger_gitlab_pipeline)
         send_telegram_message("Pipeline trigger initiated! 🚀")
 
-    # Handle /listholidays
+    # 2. List Holidays
     elif text == "/listholidays":
         with open(HOLIDAY_FILE, 'r') as f:
             data = json.load(f)
@@ -53,7 +52,7 @@ async def telegram_webhook(request: Request, background_tasks: BackgroundTasks):
             msg = "📅 Current Holiday Manifest:\n• " + "\n• ".join(hols) if hols else "Manifest is empty."
             send_telegram_message(msg)
 
-    # Handle /addholiday YYYY-MM-DD
+    # 3. Add Holiday
     elif text.startswith("/addholiday "):
         new_date = text.replace("/addholiday ", "").strip()
         with open(HOLIDAY_FILE, 'r+') as f:
@@ -61,22 +60,19 @@ async def telegram_webhook(request: Request, background_tasks: BackgroundTasks):
             if new_date not in data["holidays"]:
                 data["holidays"].append(new_date)
                 data["holidays"].sort()
-                f.seek(0)
-                json.dump(data, f, indent=2)
+                f.seek(0); json.dump(data, f, indent=2); f.truncate()
                 send_telegram_message(f"✅ Added: {new_date}")
             else:
-                send_telegram_message("Already exists.")
+                send_telegram_message("Date already exists.")
 
-    # Handle /delholiday YYYY-MM-DD
+    # 4. Delete Holiday
     elif text.startswith("/delholiday "):
         del_date = text.replace("/delholiday ", "").strip()
         with open(HOLIDAY_FILE, 'r+') as f:
             data = json.load(f)
             if del_date in data["holidays"]:
                 data["holidays"].remove(del_date)
-                f.seek(0)
-                f.truncate()
-                json.dump(data, f, indent=2)
+                f.seek(0); json.dump(data, f, indent=2); f.truncate()
                 send_telegram_message(f"🗑️ Removed: {del_date}")
             else:
                 send_telegram_message("Date not found.")
