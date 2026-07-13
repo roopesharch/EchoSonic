@@ -10,13 +10,15 @@ GITLAB_PROJECT_ID = os.getenv("GITLAB_PROJECT_ID")
 GITLAB_TRIGGER_TOKEN = os.getenv("GITLAB_TRIGGER_TOKEN")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-# Note: Ensure this path is correct relative to where your container runs
 HOLIDAY_FILE = 'tests/v2soft_attendance/holidays.json'
 
 def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text}
-    requests.post(url, json=payload)
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Failed to send Telegram message: {e}")
 
 def trigger_gitlab_pipeline():
     url = f"https://gitlab.com/api/v4/projects/{GITLAB_PROJECT_ID}/trigger/pipeline"
