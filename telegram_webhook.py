@@ -10,10 +10,15 @@ GITLAB_PROJECT_ID = os.getenv("GITLAB_PROJECT_ID")
 GITLAB_TRIGGER_TOKEN = os.getenv("GITLAB_TRIGGER_TOKEN")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-HOLIDAY_FILE = 'tests/v2soft_attendance/holidays.json'
+
+# Calculate absolute path to the holiday file
+# Assuming this script is in the root and tests/ is in the root
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+HOLIDAY_FILE = os.path.join(BASE_DIR, 'tests', 'v2soft_attendance', 'holidays.json')
 
 def send_telegram_message(text):
     """Sends a message back to the Telegram user."""
+    # Updated to use the clean token from ENV without adding 'bot' if it's already in the URL construction
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text}
     try:
