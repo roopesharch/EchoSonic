@@ -4,3 +4,4 @@ piper-tts
 python-multipart
 pyotp
 python-jose[cryptography]
+requests
